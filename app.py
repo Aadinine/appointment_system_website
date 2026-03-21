@@ -298,6 +298,21 @@ def get_time_slots(doctor_id, date):
     time_slots = generate_time_slots(doctor_id, date)
     return {"time_slots": time_slots}
 
+@app.route('/health')
+def health_check():
+    return {"status": "healthy", "message": "Backend is working!"}
+
+@app.route('/debug')
+def debug_info():
+    return {
+        "environment_variables": {
+            "GEMINI_API_KEY": "✅ Set" if os.getenv("GEMINI_API_KEY") else "❌ Missing",
+            "ATLAS_CONNECTION_STRING": "✅ Set" if os.getenv("ATLAS_CONNECTION_STRING") else "❌ Missing"
+        },
+        "database_connection": "✅ Connected" if get_atlas_connection() else "❌ Failed",
+        "doctor_data_count": len(doctor_data.get("specialists", []))
+    }
+
 if __name__ == '__main__':
     app.run(debug=True)
 else:
