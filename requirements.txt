@@ -1,6 +1,5 @@
 flask==2.3.3
-flask
 google-generativeai
 python-dotenv
 pymongo
-gunicorn==4.6.0
+gunicorn==21.2.0
