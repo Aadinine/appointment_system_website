@@ -37,6 +37,7 @@ def load_doctor_data():
     
     # Fallback to JSON file
     with open('data/doctors.json', 'r') as f:
+        print("[loaded from json]")
         return json.load(f)
 
 doctor_data = load_doctor_data()
