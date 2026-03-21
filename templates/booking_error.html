@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking Error</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="confirmation-container">
+        <div class="error-message">
+            <h1>❌ Booking Failed</h1>
+            <p class="subtitle">{{ message }}</p>
+        </div>
+        
+        <div class="appointment-details">
+            <h2>📋 Attempted Booking Details</h2>
+            
+            <div class="detail-section">
+                <h3>Doctor Information</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <strong>Doctor:</strong> {{ doctor_name }}
+                    </div>
+                    <div class="info-item">
+                        <strong>Date:</strong> {{ appointment_date }}
+                    </div>
+                    <div class="info-item">
+                        <strong>Time:</strong> {{ time_slot }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="next-steps">
+            <h3>📝 What to do next?</h3>
+            <ul>
+                <li>Choose a different time slot from the available options</li>
+                <li>Try booking for a different date</li>
+                <li>Call the hospital directly for assistance</li>
+            </ul>
+        </div>
+        
+        <div class="actions">
+            <a href="javascript:history.back()" class="btn">🔄 Try Different Time</a>
+            <a href="/specialists" class="btn">👨‍⚕️ Choose Different Doctor</a>
+            <a href="/" class="btn">🏠 Back to Home</a>
+        </div>
+    </div>
+</body>
+</html>

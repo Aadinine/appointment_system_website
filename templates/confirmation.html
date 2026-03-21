@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appointment Confirmed</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="confirmation-container">
+        <div class="success-message">
+            <h1>✅ Appointment Confirmed!</h1>
+            <p class="subtitle">Your appointment has been successfully booked</p>
+        </div>
+        
+        <div class="appointment-details">
+            <h2>📋 Appointment Details</h2>
+            
+            <div class="detail-section">
+                <h3>Patient Information</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <strong>Name:</strong> {{ appointment.patient_name }}
+                    </div>
+                    <div class="info-item">
+                        <strong>Email:</strong> {{ appointment.patient_email }}
+                    </div>
+                    <div class="info-item">
+                        <strong>Phone:</strong> {{ appointment.patient_phone }}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h3>Doctor Information</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <strong>Doctor:</strong> {{ appointment.doctor_name }}
+                    </div>
+                    <div class="info-item">
+                        <strong>Hospital:</strong> {{ appointment.hospital }}
+                    </div>
+                    <div class="info-item">
+                        <strong>Specialty:</strong> {{ appointment.specialty }}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h3>Appointment Schedule</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <strong>Date:</strong> {{ appointment.appointment_date }}
+                    </div>
+                    <div class="info-item">
+                        <strong>Time:</strong> {{ appointment.time_slot }}
+                    </div>
+                    <div class="info-item">
+                        <strong>Appointment ID:</strong> {{ appointment.appointment_id }}
+                    </div>
+                </div>
+            </div>
+            
+            {% if appointment.symptoms %}
+            <div class="detail-section">
+                <h3>Symptoms/Condition</h3>
+                <p>{{ appointment.symptoms }}</p>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="next-steps">
+            <h3>📝 What's Next?</h3>
+            <ul>
+                <li>You'll receive a confirmation email at {{ appointment.patient_email }}</li>
+                <li>Please arrive 15 minutes before your appointment time</li>
+                <li>Bring any relevant medical records or test reports</li>
+                <li>Call the hospital if you need to reschedule</li>
+            </ul>
+        </div>
+        
+        <div class="actions">
+            <button class="btn" onclick="window.print()">🖨️ Print Details</button>
+            <button class="btn" onclick="addToCalendar()">📅 Add to Calendar</button>
+            <a href="/" class="btn">🏠 Back to Home</a>
+        </div>
+    </div>
+    
+    <script>
+        function addToCalendar() {
+            const event = {
+                title: 'Appointment with {{ appointment.doctor_name }}',
+                start: '{{ appointment.appointment_date }}T{{ appointment.time_slot }}:00',
+                description: 'Appointment at {{ appointment.hospital }} - {{ appointment.specialty }}'
+            };
+            
+            // Create Google Calendar link
+            const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.title)}&dates={{ appointment.appointment_date.replace('-', '') }}T{{ appointment.time_slot.replace(':', '') }}00/{{ appointment.appointment_date.replace('-', '') }}T{{ appointment.time_slot.replace(':', '') }}00&details=${encodeURIComponent(event.description)}&location=${encodeURIComponent('{{ appointment.hospital }}')}`;
+            
+            window.open(googleCalendarUrl, '_blank');
+        }
+    </script>
+</body>
+</html>

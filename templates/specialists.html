@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Our Specialists</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>👨‍⚕️ Our Medical Specialists</h1>
+        <p class="subtitle">Meet our team of expert doctors near <strong>{{ user_location.address }}</strong></p>
+        
+        <div class="specialists-grid">
+            {% for specialist in specialists %}
+            <div class="specialist-card">
+                <div class="specialist-header">
+                    <h3>{{ specialist.name }}</h3>
+                    <span class="specialty-badge">{{ specialist.specialty }}</span>
+                    {% if specialist.distance %}
+                    <span class="distance-badge">📍 {{ specialist.distance }} km away</span>
+                    {% endif %}
+                </div>
+                
+                <div class="hospital-info">
+                    <strong>🏥 {{ specialist.hospital }}</strong>
+                    <p class="address">📍 {{ specialist.location.address }}</p>
+                    <p class="phone">📞 {{ specialist.location.phone }}</p>
+                </div>
+                
+                <p class="specialist-description">{{ specialist.description }}</p>
+                
+                <div class="conditions">
+                    <strong>Common conditions:</strong>
+                    <ul>
+                        {% for condition in specialist.conditions %}
+                        <li>{{ condition }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                
+                <div class="actions">
+                    <button class="btn book-btn" onclick="bookDoctor('{{ specialist._id }}')">
+                        📅 Book Appointment
+                    </button>
+                    <button class="btn call-btn" onclick="callDoctor('{{ specialist.location.phone }}')">
+                        📞 Call Now
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="navigation">
+            <a href="/" class="btn">🏠 Home</a>
+            <a href="/book" class="btn">📋 Book Appointment</a>
+        </div>
+    </div>
+    
+    <script>
+        function bookDoctor(doctorId) {
+            window.location.href = `/booking/${doctorId}`;
+        }
+        
+        function callDoctor(phone) {
+            window.open(`tel:${phone}`);
+        }
+    </script>
+</body>
+</html>

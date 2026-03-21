@@ -1,0 +1,133 @@
+{
+  "specialists": [
+    {
+      "name": "Dr. Rajesh Kumar",
+      "specialty": "General Physician",
+      "hospital": "City General Hospital",
+      "location": {
+        "address": "123 Main Street, Delhi",
+        "lat": 28.6139,
+        "lng": 77.2090,
+        "phone": "+91-11-23456789"
+      },
+      "description": "Handles common illnesses and routine checkups",
+      "conditions": ["fever", "cold", "cough", "headache", "general pain"],
+      "available": true
+    },
+    {
+      "name": "Dr. Priya Sharma",
+      "specialty": "General Physician", 
+      "hospital": "Apollo Hospital",
+      "location": {
+        "address": "456 Nehru Place, Delhi",
+        "lat": 28.5485,
+        "lng": 77.2518,
+        "phone": "+91-11-34567890"
+      },
+      "description": "Experienced in family medicine and preventive care",
+      "conditions": ["fever", "cold", "cough", "headache", "general pain"],
+      "available": true
+    },
+    {
+      "name": "Dr. Amit Patel",
+      "specialty": "Cardiologist",
+      "hospital": "Fortis Escorts Hospital",
+      "location": {
+        "address": "789 Okhla Road, Delhi",
+        "lat": 28.5206,
+        "lng": 77.2689,
+        "phone": "+91-11-45678901"
+      },
+      "description": "Heart and blood vessel specialist",
+      "conditions": ["chest pain", "heart palpitations", "high blood pressure", "shortness of breath"],
+      "available": true
+    },
+    {
+      "name": "Dr. Sneha Reddy",
+      "specialty": "Cardiologist",
+      "hospital": "Max Super Specialty Hospital",
+      "location": {
+        "address": "321 Saket, Delhi", 
+        "lat": 28.5283,
+        "lng": 77.2069,
+        "phone": "+91-11-56789012"
+      },
+      "description": "Expert in interventional cardiology",
+      "conditions": ["chest pain", "heart palpitations", "high blood pressure", "shortness of breath"],
+      "available": true
+    },
+    {
+      "name": "Dr. Vikram Malhotra",
+      "specialty": "Pulmonologist",
+      "hospital": "Sir Ganga Ram Hospital",
+      "location": {
+        "address": "654 Rajendra Nagar, Delhi",
+        "lat": 28.6394,
+        "lng": 77.1871,
+        "phone": "+91-11-67890123"
+      },
+      "description": "Lung and respiratory system specialist",
+      "conditions": ["breathing difficulty", "asthma", "chronic cough", "lung infections"],
+      "available": true
+    },
+    {
+      "name": "Dr. Anjali Gupta",
+      "specialty": "Dermatologist",
+      "hospital": "AIIMS Hospital",
+      "location": {
+        "address": "987 Ansari Nagar, Delhi",
+        "lat": 28.5665,
+        "lng": 77.2090,
+        "phone": "+91-11-78901234"
+      },
+      "description": "Skin, hair, and nail specialist",
+      "conditions": ["skin rash", "acne", "eczema", "skin infections", "hair loss"],
+      "available": true
+    },
+    {
+      "name": "Dr. Rohit Verma",
+      "specialty": "Neurologist",
+      "hospital": "BLK Super Specialty Hospital",
+      "location": {
+        "address": "147 Pusa Road, Delhi",
+        "lat": 28.6568,
+        "lng": 77.1671,
+        "phone": "+91-11-89012345"
+      },
+      "description": "Brain and nervous system specialist",
+      "conditions": ["seizures", "migraine", "numbness", "memory loss", "dizziness"],
+      "available": true
+    },
+    {
+      "name": "Dr. Meena Iyer",
+      "specialty": "Orthopedic",
+      "hospital": "Indraprastha Apollo Hospital",
+      "location": {
+        "address": "258 Sarita Vihar, Delhi",
+        "lat": 28.5405,
+        "lng": 77.2978,
+        "phone": "+91-11-90123456"
+      },
+      "description": "Bones, joints, and muscles specialist",
+      "conditions": ["bone fracture", "joint pain", "arthritis", "back pain", "sports injuries"],
+      "available": true
+    }
+  ],
+  "categories": {
+    "URGENT": {
+      "description": "Requires immediate medical attention",
+      "timeline": "Within 24 hours",
+      "color": "#ff4444"
+    },
+    "ROUTINE": {
+      "description": "Should be seen soon but not emergency",
+      "timeline": "Within 3-7 days", 
+      "color": "#ff8800"
+    },
+    "NORMAL": {
+      "description": "Regular appointment",
+      "timeline": "Within 1-2 weeks",
+      "color": "#00aa00"
+    }
+  }
+}

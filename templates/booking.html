@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Appointment - {{ doctor.name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="booking-container">
+        <div class="doctor-summary">
+            <h2>📅 Book Appointment</h2>
+            <div class="doctor-card">
+                <h3>{{ doctor.name }}</h3>
+                <span class="specialty-badge">{{ doctor.specialty }}</span>
+                <div class="hospital-info">
+                    <strong>🏥 {{ doctor.hospital }}</strong>
+                    <p class="address">📍 {{ doctor.location.address }}</p>
+                    <p class="phone">📞 {{ doctor.location.phone }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="booking-form">
+            <h3>Select Date & Time</h3>
+            <form method="POST" action="/confirm_booking">
+                <input type="hidden" name="doctor_id" value="{{ doctor._id }}">
+                <input type="hidden" name="doctor_name" value="{{ doctor.name }}">
+                <input type="hidden" name="hospital" value="{{ doctor.hospital }}">
+                
+                <div class="form-group">
+                    <label for="patient_name">Your Name:</label>
+                    <input type="text" id="patient_name" name="patient_name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="patient_email">Email:</label>
+                    <input type="email" id="patient_email" name="patient_email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="patient_phone">Phone:</label>
+                    <input type="tel" id="patient_phone" name="patient_phone" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="appointment_date">Date:</label>
+                    <input type="date" id="appointment_date" name="appointment_date" required min="">
+                </div>
+                
+                <div class="form-group">
+                    <label>Available Time Slots:</label>
+                    <div class="time-slots">
+                        {% for slot in time_slots %}
+                        <div class="time-slot">
+                            <input type="radio" id="slot_{{ loop.index }}" name="time_slot" value="{{ slot.time }}" required {% if not slot.available %}disabled{% endif %}>
+                            <label for="slot_{{ loop.index }}" {% if not slot.available %}style="cursor: not-allowed; opacity: 0.6;"{% endif %}>
+                                <span class="time">{{ slot.time }}</span>
+                                <span class="status {% if slot.status == 'available' %}available{% elif slot.status == 'booked' %}booked{% else %}past{% endif %}">
+                                    {% if slot.status == 'available' %}Available{% elif slot.status == 'booked' %}Booked{% else %}Past{% endif %}
+                                </span>
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="symptoms">Brief description of your condition:</label>
+                    <textarea id="symptoms" name="symptoms" rows="3" placeholder="Optional - helps the doctor prepare"></textarea>
+                </div>
+                
+                <button type="submit" class="btn">Confirm Booking</button>
+            </form>
+        </div>
+        
+        <div class="navigation">
+            <a href="/specialists" class="btn">← Back to Specialists</a>
+            <a href="/" class="btn">🏠 Home</a>
+        </div>
+    </div>
+    
+    <script>
+        // Get doctor ID from the page
+        const doctorId = "{{ doctor._id }}";
+        
+        // Set minimum date to today
+        document.getElementById('appointment_date').min = new Date().toISOString().split('T')[0];
+        
+        // Function to fetch and update time slots
+        async function updateTimeSlots(date) {
+            try {
+                // Show loading indicator
+                const timeSlotsContainer = document.querySelector('.time-slots');
+                timeSlotsContainer.innerHTML = '<div style="text-align: center; padding: 20px;">🔄 Loading available time slots...</div>';
+                
+                const response = await fetch(`/get_time_slots/${doctorId}/${date}`);
+                const data = await response.json();
+                
+                timeSlotsContainer.innerHTML = '';
+                
+                data.time_slots.forEach((slot, index) => {
+                    const slotElement = document.createElement('div');
+                    slotElement.className = 'time-slot';
+                    
+                    const statusClass = slot.status === 'available' ? 'available' : 
+                                      slot.status === 'booked' ? 'booked' : 'past';
+                    const statusText = slot.status === 'available' ? 'Available' : 
+                                     slot.status === 'booked' ? 'Booked' : 'Past';
+                    
+                    slotElement.innerHTML = `
+                        <input type="radio" id="slot_${index}" name="time_slot" value="${slot.time}" 
+                               required ${!slot.available ? 'disabled' : ''}>
+                        <label for="slot_${index}" ${!slot.available ? 'style="cursor: not-allowed; opacity: 0.6;"' : ''}>
+                            <span class="time">${slot.time}</span>
+                            <span class="status ${statusClass}">${statusText}</span>
+                        </label>
+                    `;
+                    
+                    timeSlotsContainer.appendChild(slotElement);
+                });
+                
+                // Re-attach event listeners for new time slots
+                attachTimeSlotListeners();
+                
+            } catch (error) {
+                console.error('Error fetching time slots:', error);
+                const timeSlotsContainer = document.querySelector('.time-slots');
+                timeSlotsContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #f44336;">❌ Error loading time slots. Please try again.</div>';
+            }
+        }
+        
+        // Function to attach event listeners to time slots
+        function attachTimeSlotListeners() {
+            document.querySelectorAll('input[name="time_slot"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    document.querySelectorAll('.time-slot').forEach(slot => {
+                        slot.classList.remove('selected');
+                    });
+                    this.closest('.time-slot').classList.add('selected');
+                });
+            });
+        }
+        
+        // Event listener for date change
+        document.getElementById('appointment_date').addEventListener('change', function() {
+            const selectedDate = this.value;
+            if (selectedDate) {
+                updateTimeSlots(selectedDate);
+            }
+        });
+        
+        // Initialize time slot listeners on page load
+        attachTimeSlotListeners();
+    </script>
+</body>
+</html>
