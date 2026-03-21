@@ -319,5 +319,9 @@ def debug_info():
 if __name__ == '__main__':
     app.run(debug=True)
 else:
-    # Production configuration for Render
+    # Production configuration for Vercel
     app.config['DEBUG'] = False
+
+# Vercel serverless handler
+def handler(environ, start_response):
+    return app(environ, start_response)
