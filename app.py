@@ -31,6 +31,7 @@ def load_doctor_data():
             # Convert ObjectId to string for JSON serialization
             for doctor in doctors:
                 doctor['_id'] = str(doctor['_id'])
+            print("[loaded from atlas]")
             return {"specialists": doctors}
         except:
             pass
@@ -151,6 +152,7 @@ def get_nearby_doctors(specialty_name, user_location):
     return sorted(nearby_doctors, key=lambda x: x["distance"])
 
 # Setup Gemini
+import google.generativeai as genai
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-2.5-flash')
 
