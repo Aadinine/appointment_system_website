@@ -300,3 +300,6 @@ def get_time_slots(doctor_id, date):
 
 if __name__ == '__main__':
     app.run(debug=True)
+else:
+    # Production configuration for Render
+    app.config['DEBUG'] = False
