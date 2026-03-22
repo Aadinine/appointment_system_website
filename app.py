@@ -167,7 +167,7 @@ Symptoms: "{symptoms}"
 Available specialties: {specialties_list}
 
 Return this exact JSON format:
-{{"specialty": "specialty_name", "category": "URGENT/ROUTINE/NORMAL", "reason": "brief explanation", "timeline": "when to book"}"
+{{"specialty": "specialty_name", "category": "URGENT/ROUTINE/NORMAL", "reason": "brief explanation", "timeline": "when to book"}}
 
 Examples:
 Input: "chest pain"
