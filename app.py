@@ -291,6 +291,18 @@ def analyze_symptoms(symptoms):
         return '{"specialty": "Pulmonologist", "category": "ROUTINE", "reason": "Respiratory symptoms need lung specialist evaluation", "timeline": "Within 3-7 days"}'
     elif any(word in symptoms_lower for word in ['fever', 'cold', 'flu']):
         return '{"specialty": "General Physician", "category": "ROUTINE", "reason": "Fever and cold symptoms can be evaluated by primary care", "timeline": "Within 3-7 days"}'
+    elif any(word in symptoms_lower for word in ['stomach', 'digestive', 'acid', 'liver']):
+        return '{"specialty": "Gastroenterologist", "category": "ROUTINE", "reason": "Digestive symptoms need gastroenterology evaluation", "timeline": "Within 3-7 days"}'
+    elif any(word in symptoms_lower for word in ['eye', 'vision', 'cataract', 'glaucoma']):
+        return '{"specialty": "Ophthalmologist", "category": "ROUTINE", "reason": "Eye and vision problems need ophthalmology evaluation", "timeline": "Within 1-2 weeks"}'
+    elif any(word in symptoms_lower for word in ['ear', 'nose', 'throat', 'sinus']):
+        return '{"specialty": "ENT Specialist", "category": "ROUTINE", "reason": "Ear, nose, and throat symptoms need ENT evaluation", "timeline": "Within 3-7 days"}'
+    elif any(word in symptoms_lower for word in ['pregnancy', 'menstrual', 'women', 'fertility']):
+        return '{"specialty": "Gynecologist", "category": "ROUTINE", "reason": "Women\'s health issues need gynecology evaluation", "timeline": "Within 1-2 weeks"}'
+    elif any(word in symptoms_lower for word in ['child', 'pediatric', 'baby', 'vaccine']):
+        return '{"specialty": "Pediatrician", "category": "ROUTINE", "reason": "Child health issues need pediatric evaluation", "timeline": "Within 3-7 days"}'
+    elif any(word in symptoms_lower for word in ['mental', 'depression', 'anxiety', 'stress']):
+        return '{"specialty": "Psychiatrist", "category": "ROUTINE", "reason": "Mental health issues need psychiatry evaluation", "timeline": "Within 1-2 weeks"}'
     else:
         return '{"specialty": "General Physician", "category": "ROUTINE", "reason": "General symptoms can be evaluated by primary care", "timeline": "Within 3-7 days"}'
 
