@@ -402,8 +402,8 @@ def debug_info():
     }
 
 # Vercel serverless handler
-def handler(environ, start_response):
-    return app(environ, start_response)
+def handler(environ):
+    return app(environ)
 
 if __name__ == "__main__":
     app.run(debug=True)
