@@ -160,24 +160,28 @@ def analyze_symptoms(symptoms):
     specialties = list(set([doc["specialty"] for doc in doctor_data["specialists"]]))
     specialties_list = ", ".join(specialties)
     
-    prompt = f"""
-You are a medical AI assistant. Analyze these symptoms: "{symptoms}"
+    prompt = f"""You are a JSON API. Respond ONLY with JSON.
 
-IMPORTANT: Return ONLY a JSON object with these exact keys:
-{{
-  "specialty": "one of: {specialties_list}",
-  "category": "URGENT or ROUTINE or NORMAL",
-  "reason": "brief medical explanation",
-  "timeline": "when to book appointment"
-}}
+Symptoms: "{symptoms}"
+
+Available specialties: {specialties_list}
+
+Return this exact JSON format:
+{{"specialty": "specialty_name", "category": "URGENT/ROUTINE/NORMAL", "reason": "brief explanation", "timeline": "when to book"}"
 
 Examples:
-- For chest pain: {{"specialty": "Cardiologist", "category": "URGENT", "reason": "Chest pain requires immediate cardiac evaluation", "timeline": "Within 24 hours"}}
-- For headache: {{"specialty": "General Physician", "category": "ROUTINE", "reason": "Headache can be evaluated by primary care", "timeline": "Within 3-7 days"}}
-- For skin rash: {{"specialty": "Dermatologist", "category": "NORMAL", "reason": "Skin conditions are non-urgent", "timeline": "Within 1-2 weeks"}}
+Input: "chest pain"
+Output: {{"specialty": "Cardiologist", "category": "URGENT", "reason": "Chest pain requires immediate cardiac evaluation", "timeline": "Within 24 hours"}}
 
-Analyze: "{symptoms}"
-"""
+Input: "headache"
+Output: {{"specialty": "General Physician", "category": "ROUTINE", "reason": "Headache can be evaluated by primary care", "timeline": "Within 3-7 days"}}
+
+Input: "skin rash"
+Output: {{"specialty": "Dermatologist", "category": "NORMAL", "reason": "Skin conditions are non-urgent", "timeline": "Within 1-2 weeks"}}
+
+Now analyze: "{symptoms}"
+JSON:"""
+    
     response = model.generate_content(prompt)
     text = response.text.strip()
     
@@ -187,13 +191,30 @@ Analyze: "{symptoms}"
     elif "```" in text:
         text = text.split("```")[1].strip()
     
-    # Ensure it starts with { and ends with }
+    # Remove any leading/trailing text
     if not text.startswith('{'):
         # Try to extract JSON from the response
         import re
         json_match = re.search(r'\{.*\}', text, re.DOTALL)
         if json_match:
             text = json_match.group(0)
+    
+    # If still not JSON, create fallback response
+    if not text.startswith('{') or not text.endswith('}'):
+        # Create a default response based on common symptoms
+        symptoms_lower = symptoms.lower()
+        if any(word in symptoms_lower for word in ['chest', 'heart', 'breathing']):
+            text = '{"specialty": "Cardiologist", "category": "URGENT", "reason": "Chest or heart symptoms require immediate evaluation", "timeline": "Within 24 hours"}'
+        elif any(word in symptoms_lower for word in ['skin', 'rash', 'acne']):
+            text = '{"specialty": "Dermatologist", "category": "NORMAL", "reason": "Skin conditions can be evaluated by dermatologist", "timeline": "Within 1-2 weeks"}'
+        elif any(word in symptoms_lower for word in ['brain', 'head', 'migraine', 'seizure']):
+            text = '{"specialty": "Neurologist", "category": "URGENT", "reason": "Neurological symptoms require specialist evaluation", "timeline": "Within 24 hours"}'
+        elif any(word in symptoms_lower for word in ['bone', 'joint', 'back', 'fracture']):
+            text = '{"specialty": "Orthopedic", "category": "ROUTINE", "reason": "Musculoskeletal issues need orthopedic evaluation", "timeline": "Within 3-7 days"}'
+        elif any(word in symptoms_lower for word in ['lung', 'breathing', 'asthma', 'cough']):
+            text = '{"specialty": "Pulmonologist", "category": "ROUTINE", "reason": "Respiratory symptoms need lung specialist evaluation", "timeline": "Within 3-7 days"}'
+        else:
+            text = '{"specialty": "General Physician", "category": "ROUTINE", "reason": "General symptoms can be evaluated by primary care", "timeline": "Within 3-7 days"}'
     
     print(f"🤖 AI Response: {text}")
     return text
