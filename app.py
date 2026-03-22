@@ -161,18 +161,41 @@ def analyze_symptoms(symptoms):
     specialties_list = ", ".join(specialties)
     
     prompt = f"""
-    Analyze these symptoms: "{symptoms}"
-    
-    Return ONLY this JSON format:
-    {{"specialty": "specialty name", "category": "URGENT/ROUTINE/NORMAL", "reason": "one sentence", "timeline": "when to book"}}
-    
-    Available specialties: {specialties_list}
-    """
+You are a medical AI assistant. Analyze these symptoms: "{symptoms}"
+
+IMPORTANT: Return ONLY a JSON object with these exact keys:
+{{
+  "specialty": "one of: {specialties_list}",
+  "category": "URGENT or ROUTINE or NORMAL",
+  "reason": "brief medical explanation",
+  "timeline": "when to book appointment"
+}}
+
+Examples:
+- For chest pain: {{"specialty": "Cardiologist", "category": "URGENT", "reason": "Chest pain requires immediate cardiac evaluation", "timeline": "Within 24 hours"}}
+- For headache: {{"specialty": "General Physician", "category": "ROUTINE", "reason": "Headache can be evaluated by primary care", "timeline": "Within 3-7 days"}}
+- For skin rash: {{"specialty": "Dermatologist", "category": "NORMAL", "reason": "Skin conditions are non-urgent", "timeline": "Within 1-2 weeks"}}
+
+Analyze: "{symptoms}"
+"""
     response = model.generate_content(prompt)
-    text = response.text
+    text = response.text.strip()
+    
     # Clean up JSON if needed
     if "```json" in text:
-        text = text.split("```json")[1].split("```")[0]
+        text = text.split("```json")[1].split("```")[0].strip()
+    elif "```" in text:
+        text = text.split("```")[1].strip()
+    
+    # Ensure it starts with { and ends with }
+    if not text.startswith('{'):
+        # Try to extract JSON from the response
+        import re
+        json_match = re.search(r'\{.*\}', text, re.DOTALL)
+        if json_match:
+            text = json_match.group(0)
+    
+    print(f"🤖 AI Response: {text}")
     return text
 
 @app.route('/')
