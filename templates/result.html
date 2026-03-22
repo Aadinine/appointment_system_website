@@ -42,21 +42,6 @@
                             </div>
                         </div>
                     </div>
-                    <div class="ai-details">
-                        <div class="detail-item">
-                            <span class="label">Category:</span>
-                            <span class="value {{ category.lower() }}">{{ category }}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="label">When to Book:</span>
-                            <span class="value">{{ ai_data.timeline }}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="label">Medical Reason:</span>
-                            <span class="value">{{ ai_data.reason }}</span>
-                        </div>
-                    </div>
-                </div>
             {% else %}
                 <div class="ai-result-raw">
                     <div class="raw-header">
