@@ -1,5 +1,4 @@
 from flask import Flask, render_template, request
-import google.generativeai as genai
 import os
 import json
 import math
@@ -151,16 +150,83 @@ def get_nearby_doctors(specialty_name, user_location):
     
     return sorted(nearby_doctors, key=lambda x: x["distance"])
 
-# Setup Gemini
-import google.generativeai as genai
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel('gemini-2.5-flash')
+try:
+    import openai
+    openai.api_key = os.getenv("OPENAI_API_KEY")
+    openai_available = True
+    print("✅ OpenAI GPT available")
+except ImportError:
+    openai_available = False
+    print("⚠️ OpenAI not available, install with: pip install openai")
+except Exception as e:
+    openai_available = False
+    print(f"❌ OpenAI error: {e}")
 
-def analyze_symptoms(symptoms):
-    specialties = list(set([doc["specialty"] for doc in doctor_data["specialists"]]))
-    specialties_list = ", ".join(specialties)
-    
-    prompt = f"""You are a JSON API. Respond ONLY with JSON.
+# Setup Gemini (fallback) - only import if not already imported
+if 'genai' not in globals():
+    import google.generativeai as genai
+    genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+    model = genai.GenerativeModel('gemini-2.5-flash')
+
+def analyze_with_openai(symptoms):
+    """Analyze symptoms using OpenAI GPT (better free tier)"""
+    if not openai_available:
+        return None
+        
+    try:
+        specialties = list(set([doc["specialty"] for doc in doctor_data["specialists"]]))
+        specialties_list = ", ".join(specialties)
+        
+        response = openai.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a medical AI assistant. Respond ONLY with JSON."},
+                {"role": "user", "content": f"""
+Analyze these symptoms: "{symptoms}"
+
+Available specialties: {specialties_list}
+
+Return this exact JSON format:
+{{"specialty": "specialty_name", "category": "URGENT/ROUTINE/NORMAL", "reason": "brief explanation", "timeline": "when to book"}}
+
+Examples:
+- chest pain → {{"specialty": "Cardiologist", "category": "URGENT", "reason": "Chest pain requires immediate cardiac evaluation", "timeline": "Within 24 hours"}}
+- headache → {{"specialty": "General Physician", "category": "ROUTINE", "reason": "Headache can be evaluated by primary care", "timeline": "Within 3-7 days"}}
+- skin rash → {{"specialty": "Dermatologist", "category": "NORMAL", "reason": "Skin conditions are non-urgent", "timeline": "Within 1-2 weeks"}}
+"""}
+            ],
+            temperature=0.3
+        )
+        
+        text = response.choices[0].message.content.strip()
+        
+        # Clean up JSON if needed
+        if "```json" in text:
+            text = text.split("```json")[1].split("```")[0].strip()
+        elif "```" in text:
+            text = text.split("```")[1].strip()
+        
+        # Ensure it's valid JSON
+        if not text.startswith('{'):
+            import re
+            json_match = re.search(r'\{.*\}', text, re.DOTALL)
+            if json_match:
+                text = json_match.group(0)
+        
+        print(f"🤖 OpenAI Response: {text}")
+        return text
+        
+    except Exception as e:
+        print(f"❌ OpenAI error: {e}")
+        return None
+
+def analyze_with_gemini(symptoms):
+    """Analyze symptoms using Gemini (fallback)"""
+    try:
+        specialties = list(set([doc["specialty"] for doc in doctor_data["specialists"]]))
+        specialties_list = ", ".join(specialties)
+        
+        prompt = f"""You are a JSON API. Respond ONLY with JSON.
 
 Symptoms: "{symptoms}"
 
@@ -182,42 +248,74 @@ Output: {{"specialty": "Dermatologist", "category": "NORMAL", "reason": "Skin co
 Now analyze: "{symptoms}"
 JSON:"""
     
-    response = model.generate_content(prompt)
-    text = response.text.strip()
+        response = model.generate_content(prompt)
+        text = response.text.strip()
+        
+        # Clean up JSON if needed
+        if "```json" in text:
+            text = text.split("```json")[1].split("```")[0].strip()
+        elif "```" in text:
+            text = text.split("```")[1].strip()
+        
+        # Remove any leading/trailing text
+        if not text.startswith('{'):
+            import re
+            json_match = re.search(r'\{.*\}', text, re.DOTALL)
+            if json_match:
+                text = json_match.group(0)
+        
+        # If still not JSON, create fallback response
+        if not text.startswith('{') or not text.endswith('}'):
+            symptoms_lower = symptoms.lower()
+            if any(word in symptoms_lower for word in ['chest', 'heart', 'breathing']):
+                text = '{"specialty": "Cardiologist", "category": "URGENT", "reason": "Chest or heart symptoms require immediate evaluation", "timeline": "Within 24 hours"}'
+            elif any(word in symptoms_lower for word in ['skin', 'rash', 'acne']):
+                text = '{"specialty": "Dermatologist", "category": "NORMAL", "reason": "Skin conditions can be evaluated by dermatologist", "timeline": "Within 1-2 weeks"}'
+            elif any(word in symptoms_lower for word in ['brain', 'head', 'migraine', 'seizure']):
+                text = '{"specialty": "Neurologist", "category": "URGENT", "reason": "Neurological symptoms require specialist evaluation", "timeline": "Within 24 hours"}'
+            elif any(word in symptoms_lower for word in ['bone', 'joint', 'back', 'fracture']):
+                text = '{"specialty": "Orthopedic", "category": "ROUTINE", "reason": "Musculoskeletal issues need orthopedic evaluation", "timeline": "Within 3-7 days"}'
+            elif any(word in symptoms_lower for word in ['lung', 'breathing', 'asthma', 'cough']):
+                text = '{"specialty": "Pulmonologist", "category": "ROUTINE", "reason": "Respiratory symptoms need lung specialist evaluation", "timeline": "Within 3-7 days"}'
+            else:
+                text = '{"specialty": "General Physician", "category": "ROUTINE", "reason": "General symptoms can be evaluated by primary care", "timeline": "Within 3-7 days"}'
+        
+        print(f"🤖 Gemini Response: {text}")
+        return text
+        
+    except Exception as e:
+        print(f"❌ Gemini error: {e}")
+        return None
+
+def analyze_symptoms(symptoms):
+    """Smart symptom analysis with OpenAI primary, Gemini fallback"""
     
-    # Clean up JSON if needed
-    if "```json" in text:
-        text = text.split("```json")[1].split("```")[0].strip()
-    elif "```" in text:
-        text = text.split("```")[1].strip()
+    # Try OpenAI first (better free tier)
+    openai_result = analyze_with_openai(symptoms)
+    if openai_result:
+        return openai_result
     
-    # Remove any leading/trailing text
-    if not text.startswith('{'):
-        # Try to extract JSON from the response
-        import re
-        json_match = re.search(r'\{.*\}', text, re.DOTALL)
-        if json_match:
-            text = json_match.group(0)
+    # Use Gemini fallback
+    gemini_result = analyze_with_gemini(symptoms)
+    if gemini_result:
+        return gemini_result
     
-    # If still not JSON, create fallback response
-    if not text.startswith('{') or not text.endswith('}'):
-        # Create a default response based on common symptoms
-        symptoms_lower = symptoms.lower()
-        if any(word in symptoms_lower for word in ['chest', 'heart', 'breathing']):
-            text = '{"specialty": "Cardiologist", "category": "URGENT", "reason": "Chest or heart symptoms require immediate evaluation", "timeline": "Within 24 hours"}'
-        elif any(word in symptoms_lower for word in ['skin', 'rash', 'acne']):
-            text = '{"specialty": "Dermatologist", "category": "NORMAL", "reason": "Skin conditions can be evaluated by dermatologist", "timeline": "Within 1-2 weeks"}'
-        elif any(word in symptoms_lower for word in ['brain', 'head', 'migraine', 'seizure']):
-            text = '{"specialty": "Neurologist", "category": "URGENT", "reason": "Neurological symptoms require specialist evaluation", "timeline": "Within 24 hours"}'
-        elif any(word in symptoms_lower for word in ['bone', 'joint', 'back', 'fracture']):
-            text = '{"specialty": "Orthopedic", "category": "ROUTINE", "reason": "Musculoskeletal issues need orthopedic evaluation", "timeline": "Within 3-7 days"}'
-        elif any(word in symptoms_lower for word in ['lung', 'breathing', 'asthma', 'cough']):
-            text = '{"specialty": "Pulmonologist", "category": "ROUTINE", "reason": "Respiratory symptoms need lung specialist evaluation", "timeline": "Within 3-7 days"}'
-        else:
-            text = '{"specialty": "General Physician", "category": "ROUTINE", "reason": "General symptoms can be evaluated by primary care", "timeline": "Within 3-7 days"}'
-    
-    print(f"🤖 AI Response: {text}")
-    return text
+    # Final keyword-based fallback (always works)
+    symptoms_lower = symptoms.lower()
+    if any(word in symptoms_lower for word in ['chest', 'heart', 'breathing']):
+        return '{"specialty": "Cardiologist", "category": "URGENT", "reason": "Chest or heart symptoms require immediate evaluation", "timeline": "Within 24 hours"}'
+    elif any(word in symptoms_lower for word in ['skin', 'rash', 'acne']):
+        return '{"specialty": "Dermatologist", "category": "NORMAL", "reason": "Skin conditions can be evaluated by dermatologist", "timeline": "Within 1-2 weeks"}'
+    elif any(word in symptoms_lower for word in ['brain', 'head', 'migraine', 'seizure']):
+        return '{"specialty": "Neurologist", "category": "URGENT", "reason": "Neurological symptoms require specialist evaluation", "timeline": "Within 24 hours"}'
+    elif any(word in symptoms_lower for word in ['bone', 'joint', 'back', 'fracture']):
+        return '{"specialty": "Orthopedic", "category": "ROUTINE", "reason": "Musculoskeletal issues need orthopedic evaluation", "timeline": "Within 3-7 days"}'
+    elif any(word in symptoms_lower for word in ['lung', 'breathing', 'asthma', 'cough']):
+        return '{"specialty": "Pulmonologist", "category": "ROUTINE", "reason": "Respiratory symptoms need lung specialist evaluation", "timeline": "Within 3-7 days"}'
+    elif any(word in symptoms_lower for word in ['fever', 'cold', 'flu']):
+        return '{"specialty": "General Physician", "category": "ROUTINE", "reason": "Fever and cold symptoms can be evaluated by primary care", "timeline": "Within 3-7 days"}'
+    else:
+        return '{"specialty": "General Physician", "category": "ROUTINE", "reason": "General symptoms can be evaluated by primary care", "timeline": "Within 3-7 days"}'
 
 @app.route('/')
 def home():
