@@ -180,22 +180,14 @@ def analyze_with_openai(symptoms):
         response = openai.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are a medical AI assistant. Respond ONLY with JSON."},
-                {"role": "user", "content": f"""
-Analyze these symptoms: "{symptoms}"
+                {"role": "system", "content": "You are a medical AI assistant. Respond ONLY with valid JSON. No explanations, no examples, just JSON."},
+                {"role": "user", "content": f"""Analyze symptoms: "{symptoms}"
 
 Available specialties: {specialties_list}
 
-Return this exact JSON format:
-{{"specialty": "specialty_name", "category": "URGENT/ROUTINE/NORMAL", "reason": "brief explanation", "timeline": "when to book"}}
-
-Examples:
-- chest pain → {{"specialty": "Cardiologist", "category": "URGENT", "reason": "Chest pain requires immediate cardiac evaluation", "timeline": "Within 24 hours"}}
-- headache → {{"specialty": "General Physician", "category": "ROUTINE", "reason": "Headache can be evaluated by primary care", "timeline": "Within 3-7 days"}}
-- skin rash → {{"specialty": "Dermatologist", "category": "NORMAL", "reason": "Skin conditions are non-urgent", "timeline": "Within 1-2 weeks"}}
-"""}
+Return JSON format: {{"specialty": "specialty_name", "category": "URGENT/ROUTINE/NORMAL", "reason": "brief explanation", "timeline": "when to book"}}"""}
             ],
-            temperature=0.3
+            temperature=0.1
         )
         
         text = response.choices[0].message.content.strip()
@@ -229,25 +221,10 @@ def analyze_with_gemini(symptoms):
         prompt = f"""You are a JSON API. Respond ONLY with JSON.
 
 Symptoms: "{symptoms}"
-
 Available specialties: {specialties_list}
 
-Return this exact JSON format:
-{{"specialty": "specialty_name", "category": "URGENT/ROUTINE/NORMAL", "reason": "brief explanation", "timeline": "when to book"}}
-
-Examples:
-Input: "chest pain"
-Output: {{"specialty": "Cardiologist", "category": "URGENT", "reason": "Chest pain requires immediate cardiac evaluation", "timeline": "Within 24 hours"}}
-
-Input: "headache"
-Output: {{"specialty": "General Physician", "category": "ROUTINE", "reason": "Headache can be evaluated by primary care", "timeline": "Within 3-7 days"}}
-
-Input: "skin rash"
-Output: {{"specialty": "Dermatologist", "category": "NORMAL", "reason": "Skin conditions are non-urgent", "timeline": "Within 1-2 weeks"}}
-
-Now analyze: "{symptoms}"
-JSON:"""
-    
+Return JSON format: {{"specialty": "specialty_name", "category": "URGENT/ROUTINE/NORMAL", "reason": "brief explanation", "timeline": "when to book"}}"""
+        
         response = model.generate_content(prompt)
         text = response.text.strip()
         
