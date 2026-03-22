@@ -547,6 +547,142 @@ textarea {
     border-radius: 15px;
 }
 
+/* AI Analysis Result Styles */
+.ai-result-card {
+    background: linear-gradient(135deg, #f8f9ff, #e8f4f8);
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 30px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e1e5e9;
+}
+
+.ai-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.specialty-info {
+    text-align: center;
+    flex: 1;
+    min-width: 200px;
+}
+
+.specialty-info h4 {
+    color: #2563eb;
+    margin: 0 0 10px 0;
+    font-size: 1.3em;
+}
+
+.specialty-name {
+    background: #2563eb;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 25px;
+    font-weight: bold;
+    display: inline-block;
+}
+
+.urgency-indicator {
+    flex: 1;
+    min-width: 200px;
+    text-align: center;
+}
+
+.urgency-icon {
+    font-size: 2em;
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+
+.urgency-indicator.urgent .urgency-icon {
+    color: #dc3545;
+}
+
+.urgency-indicator.routine .urgency-icon {
+    color: #fd7e14;
+}
+
+.urgency-indicator.normal .urgency-icon {
+    color: #198754;
+}
+
+.urgency-details {
+    margin-top: 10px;
+}
+
+.urgency-details p {
+    margin: 5px 0;
+    font-size: 0.9em;
+}
+
+.ai-details {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #2563eb;
+}
+
+.detail-item .label {
+    font-weight: bold;
+    color: #6c757d;
+    margin-bottom: 5px;
+    font-size: 0.85em;
+    text-transform: uppercase;
+}
+
+.detail-item .value {
+    color: #495057;
+    font-size: 1.1em;
+    line-height: 1.4;
+}
+
+.ai-result-raw {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.raw-header {
+    background: #e9ecef;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border-left: 4px solid #6c757d;
+}
+
+.raw-header h4 {
+    color: #495057;
+    margin: 0;
+}
+
+.raw-content {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    font-family: 'Courier New', monospace;
+    white-space: pre-wrap;
+    color: #495057;
+    line-height: 1.5;
+}
+
 .success-message h1 {
     color: #2e7d32;
     margin-bottom: 10px;

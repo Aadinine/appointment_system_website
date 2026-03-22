@@ -17,8 +17,67 @@
         </div>
         
         <div class="ai-analysis">
-            <h3>🔬 AI Analysis Result:</h3>
-            <div class="ai-result">{{ ai }}</div>
+            <h3>🔬 AI Analysis Result</h3>
+            {% set ai_data = ai %}
+            {% try %}
+                {% set parsed_ai = ai_data | from_json %}
+                {% if parsed_ai %}
+                    <div class="ai-result-card">
+                        <div class="ai-header">
+                            <div class="specialty-info">
+                                <h4>🏥 Recommended Specialty</h4>
+                                <span class="specialty-name">{{ parsed_ai.specialty }}</span>
+                            </div>
+                            {% set category = parsed_ai.category %}
+                            <div class="urgency-indicator {{ category.lower() }}">
+                                <div class="urgency-icon">
+                                    {% if category == 'URGENT' %}
+                                        🚨 Urgent
+                                    {% elif category == 'ROUTINE' %}
+                                        ⏰ Routine
+                                    {% else %}
+                                        ✅ Normal
+                                    {% endif %}
+                                </div>
+                                <div class="urgency-details">
+                                    <p><strong>Timeline:</strong> {{ parsed_ai.timeline }}</p>
+                                    <p><strong>Reason:</strong> {{ parsed_ai.reason }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ai-details">
+                            <div class="detail-item">
+                                <span class="label">Category:</span>
+                                <span class="value {{ category.lower() }}">{{ category }}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="label">When to Book:</span>
+                                <span class="value">{{ parsed_ai.timeline }}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="label">Medical Reason:</span>
+                                <span class="value">{{ parsed_ai.reason }}</span>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="ai-result-raw">
+                        <div class="raw-header">
+                            <h4>📋 AI Analysis</h4>
+                            <p>Here's what our AI system recommends:</p>
+                        </div>
+                        <div class="raw-content">{{ ai_data }}</div>
+                    </div>
+                {% endif %}
+            {% except %}
+                <div class="ai-result-raw">
+                    <div class="raw-header">
+                        <h4>📋 AI Analysis</h4>
+                        <p>Here's what our AI system recommends:</p>
+                    </div>
+                    <div class="raw-content">{{ ai_data }}</div>
+                </div>
+            {% endtry %}
         </div>
         
         {% if nearby_doctors %}
