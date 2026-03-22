@@ -213,9 +213,9 @@ def book():
             nearby_doctors = get_nearby_doctors(ai_data.get("specialty", "General Physician"), user_location)
             
             return render_template('result.html', name=name, symptoms=symptoms, ai=ai_result, 
-                                 nearby_doctors=nearby_doctors, user_location=user_location)
+                                 ai_data=ai_data, nearby_doctors=nearby_doctors, user_location=user_location)
         except:
-            return render_template('result.html', name=name, symptoms=symptoms, ai=ai_result)
+            return render_template('result.html', name=name, symptoms=symptoms, ai=ai_result, ai_data=None)
     
     return render_template('book.html', specialists=doctor_data["specialists"])
 
