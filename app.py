@@ -179,6 +179,9 @@ if 'genai' not in globals():
     import google.generativeai as genai
     genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
     model = genai.GenerativeModel('gemini-2.5-flash')
+    gemini_available = True
+else:
+    gemini_available = False
 
 def analyze_with_openai(symptoms):
     """Analyze symptoms using OpenAI GPT (better free tier)"""
