@@ -162,6 +162,18 @@ except Exception as e:
     openai_available = False
     print(f"❌ OpenAI error: {e}")
 
+try:
+    from groq import Groq
+    groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+    groq_available = True
+    print("✅ Groq available")
+except ImportError:
+    groq_available = False
+    print("⚠️ Groq not available, install with: pip install groq")
+except Exception as e:
+    groq_available = False
+    print(f"❌ Groq error: {e}")
+
 # Setup Gemini (fallback) - only import if not already imported
 if 'genai' not in globals():
     import google.generativeai as genai
@@ -210,6 +222,51 @@ Return JSON format: {{"specialty": "specialty_name", "category": "URGENT/ROUTINE
         
     except Exception as e:
         print(f"❌ OpenAI error: {e}")
+        return None
+
+def analyze_with_groq(symptoms):
+    """Analyze symptoms using Groq (fast and reliable)"""
+    if not groq_available:
+        return None
+        
+    try:
+        specialties = list(set([doc["specialty"] for doc in doctor_data["specialists"]]))
+        specialties_list = ", ".join(specialties)
+        
+        response = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": "You are a medical AI assistant. Respond ONLY with valid JSON. No explanations, no examples, just JSON."},
+                {"role": "user", "content": f"""Analyze symptoms: "{symptoms}"
+
+Available specialties: {specialties_list}
+
+Return JSON format: {{"specialty": "specialty_name", "category": "URGENT/ROUTINE/NORMAL", "reason": "brief explanation", "timeline": "when to book"}}"""}
+            ],
+            temperature=0.1,
+            max_tokens=200
+        )
+        
+        text = response.choices[0].message.content.strip()
+        
+        # Clean up JSON if needed
+        if "```json" in text:
+            text = text.split("```json")[1].split("```")[0].strip()
+        elif "```" in text:
+            text = text.split("```")[1].strip()
+        
+        # Ensure it's valid JSON
+        if not text.startswith('{'):
+            import re
+            json_match = re.search(r'\{.*\}', text, re.DOTALL)
+            if json_match:
+                text = json_match.group(0)
+        
+        print(f"🤖 Groq Response: {text}")
+        return text
+        
+    except Exception as e:
+        print(f"❌ Groq error: {e}")
         return None
 
 def analyze_with_gemini(symptoms):
@@ -265,9 +322,14 @@ Return JSON format: {{"specialty": "specialty_name", "category": "URGENT/ROUTINE
         return None
 
 def analyze_symptoms(symptoms):
-    """Smart symptom analysis with OpenAI primary, Gemini fallback"""
+    """Smart symptom analysis with Groq primary, OpenAI secondary, Gemini fallback"""
     
-    # Try OpenAI first (better free tier)
+    # Try Groq first (fastest and most reliable)
+    groq_result = analyze_with_groq(symptoms)
+    if groq_result:
+        return groq_result
+    
+    # Try OpenAI second
     openai_result = analyze_with_openai(symptoms)
     if openai_result:
         return openai_result
@@ -442,7 +504,13 @@ def debug_info():
         "environment_variables": {
             "GEMINI_API_KEY": "✅ Set" if os.getenv("GEMINI_API_KEY") else "❌ Missing",
             "OPENAI_API_KEY": "✅ Set" if os.getenv("OPENAI_API_KEY") else "❌ Missing",
+            "GROQ_API_KEY": "✅ Set" if os.getenv("GROQ_API_KEY") else "❌ Missing",
             "ATLAS_CONNECTION_STRING": "✅ Set" if os.getenv("ATLAS_CONNECTION_STRING") else "❌ Missing"
+        },
+        "api_status": {
+            "OpenAI": "✅ Available" if openai_available else "❌ Not Available",
+            "Groq": "✅ Available" if groq_available else "❌ Not Available",
+            "Gemini": "✅ Available" if gemini_available else "❌ Not Available"
         },
         "database_connection": "✅ Connected" if get_atlas_connection() is not None else "❌ Failed",
         "doctor_data_count": len(doctor_data.get("specialists", []))
