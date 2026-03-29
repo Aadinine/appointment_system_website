@@ -1,14 +1,13 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
+from flask import Flask, render_template, request, session, redirect, url_for, flash, jsonify
 from flask_session import Session
 from pymongo import MongoClient
-import json
+import pymongo
 import os
-import math
 from datetime import datetime, timedelta
 import uuid
 import hashlib
 import secrets
-import pymongo
+import json
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -29,139 +28,87 @@ def get_atlas_connection():
     try:
         client = pymongo.MongoClient(os.getenv("ATLAS_CONNECTION_STRING"))
         db = client["appointment_system"]
+        print("[loaded from atlas]")
         return db
-    except:
-        # Fallback to JSON if Atlas is not available
+    except Exception as e:
+        print(f"❌ Atlas connection failed: {e}")
         return None
 
-# Load doctor data - try Atlas first, fallback to JSON
+# Load doctor data from Atlas or fallback to mock data
 def load_doctor_data():
-    atlas_db = get_atlas_connection()
-    if atlas_db is not None:
-        try:
+    try:
+        atlas_db = get_atlas_connection()
+        if atlas_db is not None:
             doctors = list(atlas_db["doctor"].find({"available": True}))
             # Convert ObjectId to string for JSON serialization
             for doctor in doctors:
                 doctor['_id'] = str(doctor['_id'])
-            print("[loaded from atlas]")
+            print("[loaded doctors from atlas]")
             return {"specialists": doctors}
-        except:
-            pass
-    
-    # Fallback to JSON file
-    with open('data/doctors.json', 'r') as f:
-        print("[loaded from json]")
-        return json.load(f)
-
-doctor_data = load_doctor_data()
-
-# Generate time slots for a doctor
-def generate_time_slots(doctor_id, date):
-    # Standard clinic hours: 9:00 AM to 5:00 PM
-    slots = []
-    start_time = datetime.strptime("09:00", "%H:%M")
-    end_time = datetime.strptime("17:00", "%H:%M")
-    
-    current_time = start_time
-    while current_time < end_time:
-        time_str = current_time.strftime("%H:%M")
-        
-        # Check if slot is already booked
-        is_booked = is_time_slot_booked(doctor_id, date, time_str)
-        
-        # Check if slot is in the past
-        is_past = is_time_slot_past(date, time_str)
-        
-        # Slot is available if not booked AND not in the past
-        is_available = not is_booked and not is_past
-        
-        slots.append({
-            "time": time_str,
-            "available": is_available,
-            "status": "booked" if is_booked else ("past" if is_past else "available")
-        })
-        
-        # Add 30 minutes for each slot
-        current_time += timedelta(minutes=30)
-    
-    return slots
-
-# Check if a time slot is already booked
-def is_time_slot_booked(doctor_id, date, time):
-    atlas_db = get_atlas_connection()
-    if atlas_db is not None:
-        try:
-            # Debug: Print the query parameters
-            print(f"🔍 Checking booking for doctor_id: {doctor_id}, date: {date}, time: {time}")
-            
-            existing = atlas_db["appointments"].count_documents({
-                "doctor_id": doctor_id,
-                "appointment_date": date,
-                "time_slot": time,
-                "status": "confirmed"
-            })
-            
-            print(f"📊 Found {existing} existing bookings for this slot")
-            return existing > 0
-        except Exception as e:
-            # If appointments collection doesn't exist or other error, return False
-            print(f"❌ Error checking booking: {e}")
-            return False
-    else:
-        print("⚠️ Atlas connection not available")
-        return False
-
-# Check if a time slot is in the past
-def is_time_slot_past(date, time):
-    try:
-        # Parse the appointment date and time
-        appointment_datetime = datetime.strptime(f"{date} {time}", "%Y-%m-%d %H:%M")
-        current_datetime = datetime.now()
-        
-        # Return True if the appointment time is in the past
-        is_past = appointment_datetime < current_datetime
-        print(f"⏰ Checking if {date} {time} is in the past: {is_past}")
-        return is_past
     except Exception as e:
-        print(f"❌ Error checking past time: {e}")
-        return False
+        print(f"❌ Atlas doctor loading failed: {e}")
+    
+    # Fallback to mock data
+    print("[using mock doctor data]")
+    return doctor_data
 
-# Calculate distance between two coordinates (Haversine formula)
-def calculate_distance(lat1, lng1, lat2, lng2):
-    R = 6371  # Earth's radius in kilometers
-    
-    lat1_rad = math.radians(lat1)
-    lat2_rad = math.radians(lat2)
-    delta_lat = math.radians(lat2 - lat1)
-    delta_lng = math.radians(lng2 - lng1)
-    
-    a = (math.sin(delta_lat/2)**2 + 
-         math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(delta_lng/2)**2)
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
-    
-    return R * c
-
-# Get user location (for demo, using Delhi center)
-def get_user_location():
-    # In production, you'd use browser geolocation API
-    # For now, defaulting to Delhi center
-    return {"lat": 28.6139, "lng": 77.2090, "address": "Delhi, India"}
-
-# Sort doctors by distance from user
-def get_nearby_doctors(specialty_name, user_location):
-    nearby_doctors = []
-    
-    for doctor in doctor_data["specialists"]:
-        if doctor["specialty"] == specialty_name and doctor.get("available", True):
-            distance = calculate_distance(
-                user_location["lat"], user_location["lng"],
-                doctor["location"]["lat"], doctor["location"]["lng"]
-            )
-            doctor_with_distance = doctor.copy()
-            doctor_with_distance["distance"] = round(distance, 2)
-            nearby_doctors.append(doctor_with_distance)
-    
-    return sorted(nearby_doctors, key=lambda x: x["distance"])
+# Mock doctor data for testing
+doctor_data = {
+    "specialists": [
+        {
+            "_id": "doc1",
+            "name": "Dr. Smith",
+            "specialty": "Cardiologist",
+            "hospital": "City Hospital",
+            "location": {
+                "lat": 28.6139, 
+                "lng": 77.2090,
+                "address": "123 Main Street, Delhi",
+                "phone": "+91-98765-43210"
+            },
+            "available": True
+        },
+        {
+            "_id": "doc2", 
+            "name": "Dr. Johnson",
+            "specialty": "Dermatologist",
+            "hospital": "General Hospital",
+            "location": {
+                "lat": 28.6139, 
+                "lng": 77.2090,
+                "address": "456 Park Avenue, Delhi",
+                "phone": "+91-87654-32109"
+            },
+            "available": True
+        },
+        {
+            "_id": "doc3", 
+            "name": "Dr. Williams",
+            "specialty": "Neurologist",
+            "hospital": "Medical Center",
+            "location": {
+                "lat": 28.6139, 
+                "lng": 77.2090,
+                "address": "789 Health Road, Delhi",
+                "phone": "+91-76543-21098"
+            },
+            "available": True
+        },
+        {
+            "_id": "doc4", 
+            "name": "Dr. Brown",
+            "specialty": "Orthopedic",
+            "hospital": "Bone & Joint Clinic",
+            "location": {
+                "lat": 28.6139, 
+                "lng": 77.2090,
+                "address": "321 Ortho Street, Delhi",
+                "phone": "+91-65432-10987"
+            },
+            "available": True
+        }
+    ]
+}
 
 # User Authentication Functions
 def hash_password(password):
@@ -248,430 +195,155 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# Railway-safe client initialization - more aggressive approach
-def init_groq_client():
-    """Initialize Groq client safely for Railway environment"""
+# AI Client Status
+def check_ai_status():
+    """Check which AI services are available"""
+    ai_status = {}
+    
+    # Check Groq
     try:
-        from groq import Groq
-        import os
-        
-        # Save and clear ALL environment variables that might cause issues
-        original_env = os.environ.copy()
-        
-        # Clear all proxy-related variables
-        proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy']
-        for var in proxy_vars:
-            os.environ.pop(var, None)
-        
-        # Also clear any Groq-specific env vars that Railway might set
-        groq_vars = [k for k in os.environ.keys() if k.lower().startswith('groq')]
-        for var in groq_vars:
-            os.environ.pop(var, None)
-        
-        try:
-            # Try with minimal parameters
-            client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-            return client
-        except Exception as e1:
-            print(f"❌ Groq init attempt 1 failed: {e1}")
-            try:
-                # Try without any parameters
-                client = Groq()
-                # Set API key as attribute if possible
-                if hasattr(client, 'api_key'):
-                    client.api_key = os.getenv("GROQ_API_KEY")
-                return client
-            except Exception as e2:
-                print(f"❌ Groq init attempt 2 failed: {e2}")
-                return None
-        finally:
-            # Restore environment
-            os.environ.clear()
-            os.environ.update(original_env)
-            
-    except Exception as e:
-        print(f"❌ Groq init failed: {e}")
-        return None
-
-def init_openai_client():
-    """Initialize OpenAI client safely for Railway environment"""
-    try:
-        import openai
-        import os
-        
-        # Save and clear ALL environment variables that might cause issues
-        original_env = os.environ.copy()
-        
-        # Clear all proxy-related variables
-        proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy']
-        for var in proxy_vars:
-            os.environ.pop(var, None)
-        
-        # Also clear any OpenAI-specific env vars that Railway might set
-        openai_vars = [k for k in os.environ.keys() if k.lower().startswith('openai')]
-        for var in openai_vars:
-            os.environ.pop(var, None)
-        
-        try:
-            # Try with minimal parameters
-            client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-            return client
-        except Exception as e1:
-            print(f"❌ OpenAI init attempt 1 failed: {e1}")
-            try:
-                # Try without any parameters
-                client = openai.OpenAI()
-                # Set API key as attribute if possible
-                if hasattr(client, 'api_key'):
-                    client.api_key = os.getenv("OPENAI_API_KEY")
-                return client
-            except Exception as e2:
-                print(f"❌ OpenAI init attempt 2 failed: {e2}")
-                return None
-        finally:
-            # Restore environment
-            os.environ.clear()
-            os.environ.update(original_env)
-            
-    except Exception as e:
-        print(f"❌ OpenAI init failed: {e}")
-        return None
-
-# Simple Groq initialization - bypass Railway proxy issues
-groq_client = None
-groq_available = False
-
-def init_groq_simple():
-    """Railway-safe Groq initialization"""
-    try:
-        from groq import Groq
-        import os
-        import sys
-        
-        # Debug: Check if API key exists
-        api_key = os.getenv("GROQ_API_KEY")
-        if not api_key:
-            print("❌ GROQ_API_KEY not found in environment")
-            return None
-        
-        print(f"🔑 GROQ_API_KEY found (length: {len(api_key)})")
-        
-        # Save original environment
-        original_env = os.environ.copy()
-        
-        # Clear ALL environment variables that might interfere
-        vars_to_clear = [
-            'HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 
-            'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy',
-            'REQUESTS_CA_BUNDLE', 'CURL_CA_BUNDLE', 'SSL_CERT_FILE'
-        ]
-        
-        # Also clear any variables that might contain proxy-related strings
-        additional_vars = [k for k in os.environ.keys() if any(word in k.lower() for word in ['proxy', 'ca', 'cert', 'ssl'])]
-        
-        for var in vars_to_clear + additional_vars:
-            if var in os.environ:
-                del os.environ[var]
-                print(f"🧹 Cleared environment variable: {var}")
-        
-        # Also clear any Groq-specific env vars that Railway might set EXCEPT the API key
-        groq_vars = [k for k in os.environ.keys() if k.lower().startswith('groq') and k != 'GROQ_API_KEY']
-        for var in groq_vars:
-            if var in os.environ:
-                del os.environ[var]
-                print(f"🧹 Cleared Groq env var: {var}")
-        
-        try:
-            print(f"🔧 Attempting to create Groq client with API key: {api_key[:10]}...")
-            
-            # Create a completely clean environment for the import
-            import importlib
-            importlib.reload(sys.modules.get('groq', sys.modules.get('groq._client', None)))
-            
-            client = Groq(api_key=api_key)
-            print("✅ Groq client created successfully")
-            return client
-        except Exception as e:
-            print(f"❌ Groq client creation failed: {type(e).__name__}: {str(e)}")
-            print(f"❌ Full error details: {repr(e)}")
-            
-            # Try alternative approach - create client without any parameters
-            try:
-                print("🔄 Trying alternative Groq initialization...")
-                
-                # Clear environment again
-                for var in vars_to_clear + additional_vars + groq_vars:
-                    if var in os.environ:
-                        del os.environ[var]
-                
-                client = Groq()
-                print("✅ Groq client created without parameters")
-                
-                # Try to set API key through different methods
-                if hasattr(client, 'api_key'):
-                    client.api_key = api_key
-                    print("✅ API key set via api_key attribute")
-                elif hasattr(client, 'client'):
-                    if hasattr(client.client, 'api_key'):
-                        client.client.api_key = api_key
-                        print("✅ API key set via client.api_key attribute")
-                
-                print("✅ Groq client created with alternative method")
-                return client
-            except Exception as e2:
-                print(f"❌ Alternative Groq init failed: {type(e2).__name__}: {str(e2)}")
-                print(f"❌ Full alternative error: {repr(e2)}")
-                return None
-        finally:
-            # Restore original environment
-            os.environ.clear()
-            os.environ.update(original_env)
-                
-    except ImportError as e:
-        print(f"❌ Groq library not installed: {e}")
-        return None
-    except Exception as e:
-        print(f"❌ Unexpected Groq init error: {e}")
-        return None
-
-# Try to initialize Groq as PRIMARY
-try:
-    if os.getenv("GROQ_API_KEY"):
-        groq_client = init_groq_simple()
-        if groq_client:
-            groq_available = True
-            print("✅ Groq available as PRIMARY service")
+        if os.getenv("GROQ_API_KEY"):
+            ai_status["Groq"] = "✅ Available"
         else:
-            groq_available = False
-            print("❌ Groq failed to initialize")
-    else:
-        groq_available = False
-        print("⚠️ Groq API key not found")
-except Exception as e:
-    groq_available = False
-    print(f"❌ Groq error: {e}")
-
-# OpenAI - keep disabled for now
-openai_client = None
-openai_available = False
-print("❌ OpenAI disabled - focusing on Groq primary")
-
-# Gemini as BACKUP - only initialize if Groq fails
-gemini_available = False
-if not groq_available:
+            ai_status["Groq"] = "❌ No API key"
+    except:
+        ai_status["Groq"] = "❌ Error"
+    
+    # Check Gemini
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-        model = genai.GenerativeModel('gemini-2.5-flash')
-        # Test Gemini
-        test_response = model.generate_content("test")
-        if test_response.text:
-            gemini_available = True
-            print("✅ Gemini available as BACKUP service")
+        if os.getenv("GEMINI_API_KEY"):
+            ai_status["Gemini"] = "✅ Available"
         else:
-            gemini_available = False
-            print("❌ Gemini test failed")
-    except Exception as e:
-        gemini_available = False
-        print(f"❌ Gemini backup error: {e}")
-else:
-    print("ℹ️ Gemini backup not needed - Groq is working")
-
-def get_groq_client():
-    """Get Groq client - simple approach"""
-    return groq_client is not None
-
-def analyze_with_openai(symptoms):
-    """Analyze symptoms using OpenAI GPT (better free tier)"""
-    if not openai_available or not openai_client:
-        return None
-        
+            ai_status["Gemini"] = "❌ No API key"
+    except:
+        ai_status["Gemini"] = "❌ Error"
+    
+    # Check OpenAI
     try:
-        specialties = list(set([doc["specialty"] for doc in doctor_data["specialists"]]))
-        specialties_list = ", ".join(specialties)
-        
-        response = openai_client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a medical AI assistant. Respond ONLY with valid JSON. No explanations, no examples, just JSON."},
-                {"role": "user", "content": f"""Analyze symptoms: "{symptoms}"
+        if os.getenv("OPENAI_API_KEY"):
+            ai_status["OpenAI"] = "✅ Available"
+        else:
+            ai_status["OpenAI"] = "❌ No API key"
+    except:
+        ai_status["OpenAI"] = "❌ Error"
+    
+    return ai_status
 
-Available specialties: {specialties_list}
-
-Return JSON format: {{"specialty": "specialty_name", "category": "URGENT/ROUTINE/NORMAL", "reason": "brief explanation", "timeline": "when to book"}}"""}
-            ],
-            temperature=0.1
-        )
-        
-        text = response.choices[0].message.content.strip()
-        
-        # Clean up JSON if needed
-        if "```json" in text:
-            text = text.split("```json")[1].split("```")[0].strip()
-        elif "```" in text:
-            text = text.split("```")[1].strip()
-        
-        # Ensure it's valid JSON
-        if not text.startswith('{'):
-            import re
-            json_match = re.search(r'\{.*\}', text, re.DOTALL)
-            if json_match:
-                text = json_match.group(0)
-        
-        print(f"🤖 OpenAI Response: {text}")
-        return text
-        
-    except Exception as e:
-        print(f"❌ OpenAI error: {e}")
-        return None
-
-def analyze_with_groq(symptoms):
-    """Analyze symptoms using Groq (fast and reliable)"""
-    # Initialize client if needed
-    if not get_groq_client():
-        return None
-        
-    try:
-        specialties = list(set([doc["specialty"] for doc in doctor_data["specialists"]]))
-        specialties_list = ", ".join(specialties)
-        
-        response = groq_client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": "You are a medical AI assistant. Respond ONLY with valid JSON. No explanations, no examples, just JSON."},
-                {"role": "user", "content": f"""Analyze symptoms: "{symptoms}"
-
-Available specialties: {specialties_list}
-
-Return JSON format: {{"specialty": "specialty_name", "category": "URGENT/ROUTINE/NORMAL", "reason": "brief explanation", "timeline": "when to book"}}"""}
-            ],
-            temperature=0.1,
-            max_tokens=200
-        )
-        
-        text = response.choices[0].message.content.strip()
-        
-        # Clean up JSON if needed
-        if "```json" in text:
-            text = text.split("```json")[1].split("```")[0].strip()
-        elif "```" in text:
-            text = text.split("```")[1].strip()
-        
-        # Ensure it's valid JSON
-        if not text.startswith('{'):
-            import re
-            json_match = re.search(r'\{.*\}', text, re.DOTALL)
-            if json_match:
-                text = json_match.group(0)
-        
-        print(f"🤖 Groq Response: {text}")
-        return text
-        
-    except Exception as e:
-        print(f"❌ Groq error: {e}")
-        return None
-
-def analyze_with_gemini(symptoms):
-    """Analyze symptoms using Gemini (fallback)"""
-    try:
-        specialties = list(set([doc["specialty"] for doc in doctor_data["specialists"]]))
-        specialties_list = ", ".join(specialties)
-        
-        prompt = f"""You are a JSON API. Respond ONLY with JSON.
-
-Symptoms: "{symptoms}"
-Available specialties: {specialties_list}
-
-Return JSON format: {{"specialty": "specialty_name", "category": "URGENT/ROUTINE/NORMAL", "reason": "brief explanation", "timeline": "when to book"}}"""
-        
-        response = model.generate_content(prompt)
-        text = response.text.strip()
-        
-        # Clean up JSON if needed
-        if "```json" in text:
-            text = text.split("```json")[1].split("```")[0].strip()
-        elif "```" in text:
-            text = text.split("```")[1].strip()
-        
-        # Remove any leading/trailing text
-        if not text.startswith('{'):
-            import re
-            json_match = re.search(r'\{.*\}', text, re.DOTALL)
-            if json_match:
-                text = json_match.group(0)
-        
-        # If still not JSON, create fallback response
-        if not text.startswith('{') or not text.endswith('}'):
-            symptoms_lower = symptoms.lower()
-            if any(word in symptoms_lower for word in ['chest', 'heart', 'breathing']):
-                text = '{"specialty": "Cardiologist", "category": "URGENT", "reason": "Chest or heart symptoms require immediate evaluation", "timeline": "Within 24 hours"}'
-            elif any(word in symptoms_lower for word in ['skin', 'rash', 'acne']):
-                text = '{"specialty": "Dermatologist", "category": "NORMAL", "reason": "Skin conditions can be evaluated by dermatologist", "timeline": "Within 1-2 weeks"}'
-            elif any(word in symptoms_lower for word in ['brain', 'head', 'migraine', 'seizure']):
-                text = '{"specialty": "Neurologist", "category": "URGENT", "reason": "Neurological symptoms require specialist evaluation", "timeline": "Within 24 hours"}'
-            elif any(word in symptoms_lower for word in ['bone', 'joint', 'back', 'fracture']):
-                text = '{"specialty": "Orthopedic", "category": "ROUTINE", "reason": "Musculoskeletal issues need orthopedic evaluation", "timeline": "Within 3-7 days"}'
-            elif any(word in symptoms_lower for word in ['lung', 'breathing', 'asthma', 'cough']):
-                text = '{"specialty": "Pulmonologist", "category": "ROUTINE", "reason": "Respiratory symptoms need lung specialist evaluation", "timeline": "Within 3-7 days"}'
-            else:
-                text = '{"specialty": "General Physician", "category": "ROUTINE", "reason": "General symptoms can be evaluated by primary care", "timeline": "Within 3-7 days"}'
-        
-        print(f"🤖 Gemini Response: {text}")
-        return text
-        
-    except Exception as e:
-        print(f"❌ Gemini error: {e}")
-        return None
-
+# Simple symptom analysis with AI service tracking
 def analyze_symptoms(symptoms):
-    """Smart symptom analysis with Groq PRIMARY, Gemini BACKUP"""
-    
-    # Try Groq first as PRIMARY service
-    groq_result = analyze_with_groq(symptoms)
-    if groq_result:
-        print("🎯 Using Groq as PRIMARY AI service")
-        return groq_result
-    
-    # Use Gemini as BACKUP if Groq fails
-    gemini_result = analyze_with_gemini(symptoms)
-    if gemini_result:
-        print("🔄 Using Gemini as BACKUP AI service")
-        return gemini_result
-    
-    # Try OpenAI (disabled but keeping for structure)
-    openai_result = analyze_with_openai(symptoms)
-    if openai_result:
-        return openai_result
-    
-    # Final keyword-based fallback (always works)
-    print("🔄 Using keyword fallback as all AI services failed")
+    """Smart symptom analysis with fallback and AI service tracking"""
     symptoms_lower = symptoms.lower()
+    
+    # Try to use actual AI services first
+    ai_service_used = "Keyword Analysis"
+    
+    # Check Groq first
+    if os.getenv("GROQ_API_KEY"):
+        try:
+            from groq import Groq
+            client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+            response = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[
+                    {"role": "system", "content": "You are a medical AI assistant. Provide helpful, natural responses in JSON format only. Focus on the most likely specialty based on symptoms."},
+                    {"role": "user", "content": f"""Analyze these symptoms: "{symptoms}"
+
+Available specialties: Cardiologist, Dermatologist, Neurologist, Orthopedic, Pulmonologist, General Physician, Gastroenterologist, Ophthalmologist, ENT Specialist, Gynecologist, Pediatrician, Psychiatrist
+
+Return JSON format: {{"specialty": "specialty_name", "category": "URGENT/ROUTINE/NORMAL", "reason": "detailed explanation", "timeline": "specific timeframe"}}"""}
+                ],
+                temperature=0.3,
+                max_tokens=150
+            )
+            result = response.choices[0].message.content.strip()
+            print(f"🤖 [Groq responded]: {result}")
+            return result
+        except Exception as e:
+            print(f"❌ Groq failed: {e}")
+    
+    # Check Gemini
+    if os.getenv("GEMINI_API_KEY"):
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+            model = genai.GenerativeModel('gemini-pro')
+            response = model.generate_content(f"""You are a medical AI assistant. Provide helpful, natural responses in JSON format only. Focus on the most likely specialty based on symptoms.
+
+Analyze these symptoms: "{symptoms}"
+
+Available specialties: Cardiologist, Dermatologist, Neurologist, Orthopedic, Pulmonologist, General Physician, Gastroenterologist, Ophthalmologist, ENT Specialist, Gynecologist, Pediatrician, Psychiatrist
+
+Return JSON format: {{"specialty": "specialty_name", "category": "URGENT/ROUTINE/NORMAL", "reason": "detailed explanation", "timeline": "specific timeframe"}}""")
+            result = response.text.strip()
+            print(f"🤖 [Gemini responded]: {result}")
+            return result
+        except Exception as e:
+            print(f"❌ Gemini failed: {e}")
+    
+    # Check OpenAI
+    if os.getenv("OPENAI_API_KEY"):
+        try:
+            import openai
+            client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a medical AI assistant. Provide helpful, natural responses in JSON format only. Focus on the most likely specialty based on symptoms."},
+                    {"role": "user", "content": f"""Analyze these symptoms: "{symptoms}"
+
+Available specialties: Cardiologist, Dermatologist, Neurologist, Orthopedic, Pulmonologist, General Physician, Gastroenterologist, Ophthalmologist, ENT Specialist, Gynecologist, Pediatrician, Psychiatrist
+
+Return JSON format: {{"specialty": "specialty_name", "category": "URGENT/ROUTINE/NORMAL", "reason": "detailed explanation", "timeline": "specific timeframe"}}"""}
+                ],
+                temperature=0.3,
+            )
+            result = response.choices[0].message.content.strip()
+            print(f"🤖 [OpenAI responded]: {result}")
+            return result
+        except Exception as e:
+            print(f"❌ OpenAI failed: {e}")
+    
+    # Keyword fallback with better explanations
     if any(word in symptoms_lower for word in ['chest', 'heart', 'breathing']):
-        return '{"specialty": "Cardiologist", "category": "URGENT", "reason": "Chest or heart symptoms require immediate evaluation", "timeline": "Within 24 hours"}'
+        result = '{"specialty": "Cardiologist", "category": "URGENT", "reason": "Chest pain and breathing difficulties may indicate serious heart or lung conditions requiring immediate medical attention", "timeline": "Within 24 hours"}'
     elif any(word in symptoms_lower for word in ['skin', 'rash', 'acne']):
-        return '{"specialty": "Dermatologist", "category": "NORMAL", "reason": "Skin conditions can be evaluated by dermatologist", "timeline": "Within 1-2 weeks"}'
+        result = '{"specialty": "Dermatologist", "category": "NORMAL", "reason": "Skin issues like rashes and acne can be effectively treated by a dermatology specialist", "timeline": "Within 1-2 weeks"}'
     elif any(word in symptoms_lower for word in ['brain', 'head', 'migraine', 'seizure']):
-        return '{"specialty": "Neurologist", "category": "URGENT", "reason": "Neurological symptoms require specialist evaluation", "timeline": "Within 24 hours"}'
+        result = '{"specialty": "Neurologist", "category": "URGENT", "reason": "Headaches, migraines and seizures require neurological evaluation to rule out serious conditions", "timeline": "Within 24 hours"}'
     elif any(word in symptoms_lower for word in ['bone', 'joint', 'back', 'fracture']):
-        return '{"specialty": "Orthopedic", "category": "ROUTINE", "reason": "Musculoskeletal issues need orthopedic evaluation", "timeline": "Within 3-7 days"}'
+        result = '{"specialty": "Orthopedic", "category": "ROUTINE", "reason": "Bone, joint and back problems need orthopedic specialist evaluation for proper treatment", "timeline": "Within 3-7 days"}'
     elif any(word in symptoms_lower for word in ['lung', 'breathing', 'asthma', 'cough']):
-        return '{"specialty": "Pulmonologist", "category": "ROUTINE", "reason": "Respiratory symptoms need lung specialist evaluation", "timeline": "Within 3-7 days"}'
+        result = '{"specialty": "Pulmonologist", "category": "ROUTINE", "reason": "Respiratory symptoms including cough and asthma need lung specialist evaluation", "timeline": "Within 3-7 days"}'
     elif any(word in symptoms_lower for word in ['fever', 'cold', 'flu']):
-        return '{"specialty": "General Physician", "category": "ROUTINE", "reason": "Fever and cold symptoms can be evaluated by primary care", "timeline": "Within 3-7 days"}'
+        result = '{"specialty": "General Physician", "category": "ROUTINE", "reason": "Fever and cold symptoms can be managed by primary care physician", "timeline": "Within 3-7 days"}'
     elif any(word in symptoms_lower for word in ['stomach', 'digestive', 'acid', 'liver']):
-        return '{"specialty": "Gastroenterologist", "category": "ROUTINE", "reason": "Digestive symptoms need gastroenterology evaluation", "timeline": "Within 3-7 days"}'
+        result = '{"specialty": "Gastroenterologist", "category": "ROUTINE", "reason": "Stomach and digestive issues require gastroenterology specialist for proper diagnosis", "timeline": "Within 3-7 days"}'
     elif any(word in symptoms_lower for word in ['eye', 'vision', 'cataract', 'glaucoma']):
-        return '{"specialty": "Ophthalmologist", "category": "ROUTINE", "reason": "Eye and vision problems need ophthalmology evaluation", "timeline": "Within 1-2 weeks"}'
+        result = '{"specialty": "Ophthalmologist", "category": "ROUTINE", "reason": "Eye problems and vision changes need ophthalmology specialist evaluation", "timeline": "Within 1-2 weeks"}'
     elif any(word in symptoms_lower for word in ['ear', 'nose', 'throat', 'sinus']):
-        return '{"specialty": "ENT Specialist", "category": "ROUTINE", "reason": "Ear, nose, and throat symptoms need ENT evaluation", "timeline": "Within 3-7 days"}'
+        result = '{"specialty": "ENT Specialist", "category": "ROUTINE", "reason": "Ear, nose and throat problems need ENT specialist for comprehensive care", "timeline": "Within 3-7 days"}'
     elif any(word in symptoms_lower for word in ['pregnancy', 'menstrual', 'women', 'fertility']):
-        return '{"specialty": "Gynecologist", "category": "ROUTINE", "reason": "Women\'s health issues need gynecology evaluation", "timeline": "Within 1-2 weeks"}'
+        result = '{"specialty": "Gynecologist", "category": "ROUTINE", "reason": "Women\'s health issues including pregnancy and menstrual problems need gynecology care", "timeline": "Within 1-2 weeks"}'
     elif any(word in symptoms_lower for word in ['child', 'pediatric', 'baby', 'vaccine']):
-        return '{"specialty": "Pediatrician", "category": "ROUTINE", "reason": "Child health issues need pediatric evaluation", "timeline": "Within 3-7 days"}'
+        result = '{"specialty": "Pediatrician", "category": "ROUTINE", "reason": "Child health issues and vaccinations need pediatric specialist for age-appropriate care", "timeline": "Within 3-7 days"}'
     elif any(word in symptoms_lower for word in ['mental', 'depression', 'anxiety', 'stress']):
-        return '{"specialty": "Psychiatrist", "category": "ROUTINE", "reason": "Mental health issues need psychiatry evaluation", "timeline": "Within 1-2 weeks"}'
+        result = '{"specialty": "Psychiatrist", "category": "URGENT", "reason": "Mental health concerns including depression and anxiety need immediate psychiatric evaluation", "timeline": "Within 24 hours"}'
     else:
-        return '{"specialty": "General Physician", "category": "ROUTINE", "reason": "General symptoms can be evaluated by primary care", "timeline": "Within 3-7 days"}'
+        result = '{"specialty": "General Physician", "category": "ROUTINE", "reason": "General symptoms can be evaluated and treated by primary care physician", "timeline": "Within 3-7 days"}'
+    
+    print(f"🤖 [Keyword Analysis]: {result}")
+    return result
+
+# Routes
+@app.route('/')
+def home():
+    print("🏠 Home route accessed")
+    if 'user' in session:
+        print("🔄 Redirecting to dashboard - user is logged in")
+        return redirect(url_for('dashboard'))
+    
+    print("🏠 Showing homepage - user not logged in")
+    return render_template('index.html')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -734,7 +406,7 @@ def logout():
 def dashboard():
     """User dashboard showing their appointments"""
     user = session['user']
-    user_id = user['email']  # Using email as user identifier for appointments
+    user_id = user['email']
     
     # Get user's appointments
     appointments = get_user_appointments(user_id)
@@ -744,7 +416,7 @@ def dashboard():
     past_appointments = []
     
     for appointment in appointments:
-        appointment_date = datetime.strptime(appointment['appointment_date'], '%Y-%m-%d')
+        appointment_date = datetime.strptime(appointment['appointment_date'], '%Y-%m-%d').date()
         if appointment_date >= datetime.now().date():
             upcoming_appointments.append(appointment)
         else:
@@ -755,191 +427,147 @@ def dashboard():
                          upcoming_appointments=upcoming_appointments,
                          past_appointments=past_appointments)
 
-@app.route('/')
-def home():
-    # Check if user is logged in
-    if 'user' in session:
-        return redirect(url_for('dashboard'))
-    return render_template('index.html')
-
-@app.route('/specialists')
-def specialists():
-    user_location = get_user_location()
-    specialists_with_distance = []
-    
-    for specialist in doctor_data["specialists"]:
-        if specialist["available"]:
-            distance = calculate_distance(
-                user_location["lat"], user_location["lng"],
-                specialist["location"]["lat"], specialist["location"]["lng"]
-            )
-            specialist_copy = specialist.copy()
-            specialist_copy["distance"] = round(distance, 2)
-            specialists_with_distance.append(specialist_copy)
-    
-    # Sort by distance
-    specialists_with_distance.sort(key=lambda x: x["distance"])
-    
-    return render_template('specialists.html', specialists=specialists_with_distance, user_location=user_location)
-
 @app.route('/book', methods=['GET', 'POST'])
 @login_required
 def book():
     if request.method == 'POST':
         symptoms = request.form['symptoms']
         user = session['user']
-        name = user['name']  # Use logged-in user's name
+        name = user['name']
         ai_result = analyze_symptoms(symptoms)
         
-        # Parse AI result to get specialty
         try:
             ai_data = json.loads(ai_result)
-            user_location = get_user_location()
-            nearby_doctors = get_nearby_doctors(ai_data.get("specialty", "General Physician"), user_location)
+            doctors = load_doctor_data()
+            # Find doctors matching recommended specialty
+            recommended_specialty = ai_data.get("specialty", "General Physician")
+            nearby_doctors = [doc for doc in doctors["specialists"] if doc["specialty"] == recommended_specialty]
+            
+            # If no doctors match the specialty, show all available doctors
+            if not nearby_doctors:
+                nearby_doctors = doctors["specialists"]
+                print(f"⚠️ No doctors found for {recommended_specialty}, showing all {len(nearby_doctors)} available doctors")
+            else:
+                print(f"✅ Found {len(nearby_doctors)} doctors matching {recommended_specialty}")
             
             return render_template('result.html', name=name, symptoms=symptoms, ai=ai_result, 
-                                 ai_data=ai_data, nearby_doctors=nearby_doctors, user_location=user_location)
-        except:
+                                 ai_data=ai_data, nearby_doctors=nearby_doctors, user_location={"lat": 28.6139, "lng": 77.2090})
+        except Exception as e:
+            print(f"❌ Error parsing AI result: {e}")
             return render_template('result.html', name=name, symptoms=symptoms, ai=ai_result, ai_data=None)
     
-    return render_template('book.html', specialists=doctor_data["specialists"])
+    doctors = load_doctor_data()
+    return render_template('book.html', specialists=doctors["specialists"])
+
+@app.route('/specialists')
+def specialists():
+    doctors = load_doctor_data()
+    return render_template('specialists.html', specialists=doctors["specialists"], user_location={"lat": 28.6139, "lng": 77.2090})
 
 @app.route('/booking/<doctor_id>')
+@login_required
 def booking(doctor_id):
-    # Find doctor by ID
-    doctor = None
-    for specialist in doctor_data["specialists"]:
-        if specialist["_id"] == doctor_id:
-            doctor = specialist
-            break
+    """Show booking page for specific doctor"""
+    doctors = load_doctor_data()
+    doctor = next((doc for doc in doctors["specialists"] if doc["_id"] == doctor_id), None)
     
     if not doctor:
-        return "Doctor not found", 404
+        flash('Doctor not found', 'error')
+        return redirect(url_for('specialists'))
     
-    # Get today's date for default
-    today = datetime.now().strftime("%Y-%m-%d")
-    time_slots = generate_time_slots(doctor_id, today)
-    
-    return render_template('booking.html', doctor=doctor, time_slots=time_slots, today=today)
+    user = session['user']
+    return render_template('booking.html', doctor=doctor, user=user)
 
 @app.route('/confirm_booking', methods=['POST'])
 @login_required
 def confirm_booking():
-    # Get logged-in user info
+    """Confirm and save appointment booking"""
     user = session['user']
     
     # Get form data
-    doctor_id = request.form['doctor_id']
-    doctor_name = request.form['doctor_name']
-    hospital = request.form['hospital']
-    patient_name = user['name']  # Use logged-in user's name
-    patient_email = user['email']  # Use logged-in user's email
-    patient_phone = user['phone']  # Use logged-in user's phone
-    appointment_date = request.form['appointment_date']
-    time_slot = request.form['time_slot']
+    doctor_id = request.form.get('doctor_id')
+    doctor_name = request.form.get('doctor_name')
+    hospital = request.form.get('hospital')
+    appointment_date = request.form.get('appointment_date')
+    time_slot = request.form.get('time_slot')
     symptoms = request.form.get('symptoms', '')
     
-    # Check if the slot is already booked (server-side validation)
-    if is_time_slot_booked(doctor_id, appointment_date, time_slot):
-        # Slot is already booked, show error message
-        return render_template('booking_error.html', 
-                             doctor_name=doctor_name,
-                             appointment_date=appointment_date,
-                             time_slot=time_slot,
-                             message="This time slot is already booked. Please choose a different time.")
+    # Validate required fields
+    if not all([doctor_id, doctor_name, hospital, appointment_date, time_slot]):
+        flash('Please fill all required fields', 'error')
+        return redirect(url_for('book'))
     
-    # Find doctor specialty
-    doctor = None
-    for specialist in doctor_data["specialists"]:
-        if specialist["_id"] == doctor_id:
-            doctor = specialist
-            break
-    
-    # Generate appointment ID
-    appointment_id = str(uuid.uuid4())[:8].upper()
-    
-    # Create appointment record
-    appointment = {
-        "appointment_id": appointment_id,
-        "doctor_id": doctor_id,
-        "doctor_name": doctor_name,
-        "hospital": hospital,
-        "specialty": doctor["specialty"] if doctor else "General Physician",
-        "patient_name": patient_name,
-        "patient_email": patient_email,
-        "patient_phone": patient_phone,
-        "appointment_date": appointment_date,
-        "time_slot": time_slot,
-        "symptoms": symptoms,
-        "status": "confirmed",
-        "created_at": datetime.now().isoformat()
-    }
-    
-    # Save to Atlas
-    atlas_db = get_atlas_connection()
-    if atlas_db is not None:
-        try:
-            atlas_db["appointments"].insert_one(appointment)
-        except:
-            pass
-    
-    return render_template('confirmation.html', appointment=appointment)
+    try:
+        # Save appointment to database
+        atlas_db = get_atlas_connection()
+        if atlas_db is not None:
+            appointment_data = {
+                "patient_email": user['email'],
+                "patient_name": user['name'],
+                "patient_phone": user['phone'],
+                "doctor_id": doctor_id,
+                "doctor_name": doctor_name,
+                "hospital": hospital,
+                "appointment_date": appointment_date,
+                "time_slot": time_slot,
+                "symptoms": symptoms,
+                "status": "confirmed",
+                "created_at": datetime.now()
+            }
+            
+            result = atlas_db["appointments"].insert_one(appointment_data)
+            flash('Appointment booked successfully!', 'success')
+            return redirect(url_for('dashboard'))
+        else:
+            flash('Database connection error', 'error')
+            return redirect(url_for('book'))
+            
+    except Exception as e:
+        print(f"❌ Booking error: {e}")
+        flash('Booking failed. Please try again.', 'error')
+        return redirect(url_for('book'))
 
 @app.route('/get_time_slots/<doctor_id>/<date>')
+@login_required
 def get_time_slots(doctor_id, date):
-    time_slots = generate_time_slots(doctor_id, date)
-    return {"time_slots": time_slots}
-
-@app.route('/health')
-def health_check():
-    return {"status": "healthy", "message": "Backend is working!"}
-
-@app.route('/debug')
-def debug_info():
-    import os
-    
-    # Get detailed Groq info
-    groq_key = os.getenv("GROQ_API_KEY")
-    groq_key_info = {
-        "exists": "✅ Set" if groq_key else "❌ Missing",
-        "length": len(groq_key) if groq_key else 0,
-        "starts_with_gsk": groq_key.startswith("gsk_") if groq_key else False
-    }
-    
-    # Check for proxy variables
-    proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 
-                 'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy']
-    proxy_info = {}
-    for var in proxy_vars:
-        if var in os.environ:
-            proxy_info[var] = "✅ Set"
-        else:
-            proxy_info[var] = "❌ Not Set"
-    
-    return {
-        "environment_variables": {
-            "GEMINI_API_KEY": "✅ Set" if os.getenv("GEMINI_API_KEY") else "❌ Missing",
-            "OPENAI_API_KEY": "✅ Set" if os.getenv("OPENAI_API_KEY") else "❌ Missing",
-            "GROQ_API_KEY": groq_key_info,
-            "ATLAS_CONNECTION_STRING": "✅ Set" if os.getenv("ATLAS_CONNECTION_STRING") else "❌ Missing"
-        },
-        "proxy_variables": proxy_info,
-        "api_status": {
-            "OpenAI": "✅ Available" if openai_available else "❌ Not Available",
-            "Groq": "✅ Available" if groq_available else "❌ Not Available",
-            "Gemini": "✅ Available" if gemini_available else "❌ Not Available"
-        },
-        "database_connection": "✅ Connected" if get_atlas_connection() is not None else "❌ Failed",
-        "doctor_data_count": len(doctor_data.get("specialists", []))
-    }
+    """API endpoint to get available time slots for a doctor on a specific date"""
+    try:
+        # Generate time slots (9 AM to 5 PM, hourly)
+        time_slots = []
+        for hour in range(9, 18):  # 9 AM to 5 PM
+            time_str = f"{hour:02d}:00"
+            # Randomly mark some slots as unavailable for demo
+            status = 'available' if hour % 3 != 0 else 'booked'
+            time_slots.append({
+                "time": time_str,
+                "available": status == 'available',
+                "status": status
+            })
+        
+        return jsonify(time_slots)
+    except Exception as e:
+        print(f"❌ Time slots error: {e}")
+        return jsonify([])
 
 if __name__ == '__main__':
+    print("🚀 Starting appointment system...")
+    
+    # Test Atlas connection
+    atlas_db = get_atlas_connection()
+    if atlas_db is not None:
+        print("✅ Atlas database connected")
+    else:
+        print("❌ Atlas database connection failed")
+    
+    # Load doctor data
+    doctors = load_doctor_data()
+    print(f"📋 Loaded {len(doctors['specialists'])} specialists")
+    
+    # Check AI services status
+    ai_status = check_ai_status()
+    print("🤖 AI Services Status:")
+    for service, status in ai_status.items():
+        print(f"  {service}: {status}")
+    
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
-else:
-    # Production configuration for Vercel
-    app.config['DEBUG'] = False
-
-# Vercel serverless handler
-def handler(environ, start_response):
-    return app(environ, start_response)
+    app.run(host='127.0.0.1', port=port, debug=False)

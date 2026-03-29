@@ -30,17 +30,17 @@
                 
                 <div class="form-group">
                     <label for="patient_name">Your Name:</label>
-                    <input type="text" id="patient_name" name="patient_name" required>
+                    <input type="text" id="patient_name" name="patient_name" value="{{ user.name }}" readonly style="background: #f8f9fa;">
                 </div>
                 
                 <div class="form-group">
                     <label for="patient_email">Email:</label>
-                    <input type="email" id="patient_email" name="patient_email" required>
+                    <input type="email" id="patient_email" name="patient_email" value="{{ user.email }}" readonly style="background: #f8f9fa;">
                 </div>
                 
                 <div class="form-group">
                     <label for="patient_phone">Phone:</label>
-                    <input type="tel" id="patient_phone" name="patient_phone" required>
+                    <input type="tel" id="patient_phone" name="patient_phone" value="{{ user.phone }}" readonly style="background: #f8f9fa;">
                 </div>
                 
                 <div class="form-group">
