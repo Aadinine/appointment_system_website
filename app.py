@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
+from flask_session import Session
 from pymongo import MongoClient
 import json
 import os
@@ -19,6 +20,9 @@ app.config['SECRET_KEY'] = secrets.token_hex(32)
 app.config['SESSION_PERMANENT'] = False
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
+
+# Initialize Flask-Session
+Session(app)
 
 # MongoDB Atlas connection
 def get_atlas_connection():
