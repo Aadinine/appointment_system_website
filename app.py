@@ -162,6 +162,22 @@ except Exception as e:
     openai_available = False
     print(f"❌ OpenAI error: {e}")
 
+groq_client = None
+groq_available = False
+
+def get_groq_client():
+    """Initialize Groq client only when needed"""
+    global groq_client
+    if groq_client is None and os.getenv("GROQ_API_KEY"):
+        try:
+            from groq import Groq
+            groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+            return True
+        except Exception as e:
+            print(f"❌ Groq initialization error: {e}")
+            return False
+    return groq_client is not None
+
 try:
     from groq import Groq
     groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
@@ -229,7 +245,8 @@ Return JSON format: {{"specialty": "specialty_name", "category": "URGENT/ROUTINE
 
 def analyze_with_groq(symptoms):
     """Analyze symptoms using Groq (fast and reliable)"""
-    if not groq_available:
+    # Initialize client if needed
+    if not get_groq_client():
         return None
         
     try:
