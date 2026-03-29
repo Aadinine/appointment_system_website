@@ -180,7 +180,7 @@ def get_groq_client():
 
 try:
     from groq import Groq
-    groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+    groq_client = None
     groq_available = True
     print("✅ Groq available")
 except ImportError:
