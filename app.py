@@ -241,54 +241,37 @@ def init_openai_client():
 
 openai_client = None
 openai_available = False
-try:
-    openai_client = init_openai_client()
-    if openai_client:
-        openai_available = True
-        print("✅ OpenAI GPT available")
-    else:
-        openai_available = False
-        print("❌ OpenAI initialization failed")
-except Exception as e:
-    openai_available = False
-    print(f"❌ OpenAI error: {e}")
+print("❌ OpenAI temporarily disabled due to Railway proxy issues")
 
 groq_client = None
 groq_available = False
+print("❌ Groq temporarily disabled due to Railway proxy issues")
 
 def get_groq_client():
-    """Initialize Groq client only when needed"""
-    global groq_client
-    if groq_client is None and os.getenv("GROQ_API_KEY"):
-        groq_client = init_groq_client()
-        return groq_client is not None
-    return groq_client is not None
+    """Initialize Groq client only when needed - DISABLED"""
+    return False
 
-# Test Groq availability properly (without API call to avoid startup errors)
+# Test Groq availability properly - DISABLED
+groq_available = False
+print("❌ Groq disabled - will fix after Gemini confirmed working")
+
+# Setup Gemini as PRIMARY service - ensure it works
 try:
-    if os.getenv("GROQ_API_KEY"):
-        test_client = init_groq_client()
-        if test_client:
-            groq_available = True
-            print("✅ Groq available")
-        else:
-            groq_available = False
-            print("❌ Groq initialization failed")
-    else:
-        groq_available = False
-        print("⚠️ Groq API key not found")
-except Exception as e:
-    groq_available = False
-    print(f"❌ Groq error: {e}")
-
-# Setup Gemini (fallback) - only import if not already imported
-if 'genai' not in globals():
     import google.generativeai as genai
     genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
     model = genai.GenerativeModel('gemini-2.5-flash')
-    gemini_available = True
-else:
+    # Test Gemini with a simple call to verify it works
+    test_response = model.generate_content("test")
+    if test_response.text:
+        gemini_available = True
+        print("✅ Gemini available and working as PRIMARY service")
+    else:
+        gemini_available = False
+        print("❌ Gemini test failed - no response")
+except Exception as e:
     gemini_available = False
+    print(f"❌ Gemini error: {e}")
+    print("⚠️ All AI services currently disabled - will use keyword fallback")
 
 def analyze_with_openai(symptoms):
     """Analyze symptoms using OpenAI GPT (better free tier)"""
@@ -433,24 +416,26 @@ Return JSON format: {{"specialty": "specialty_name", "category": "URGENT/ROUTINE
         return None
 
 def analyze_symptoms(symptoms):
-    """Smart symptom analysis with Groq primary, OpenAI secondary, Gemini fallback"""
+    """Smart symptom analysis with Gemini as PRIMARY (Groq/OpenAI disabled)"""
     
-    # Try Groq first (fastest and most reliable)
+    # Use Gemini as PRIMARY service (Groq/OpenAI disabled due to Railway issues)
+    gemini_result = analyze_with_gemini(symptoms)
+    if gemini_result:
+        print("🎯 Using Gemini as PRIMARY AI service")
+        return gemini_result
+    
+    # Try Groq (disabled but keeping for structure)
     groq_result = analyze_with_groq(symptoms)
     if groq_result:
         return groq_result
     
-    # Try OpenAI second
+    # Try OpenAI (disabled but keeping for structure)
     openai_result = analyze_with_openai(symptoms)
     if openai_result:
         return openai_result
     
-    # Use Gemini fallback
-    gemini_result = analyze_with_gemini(symptoms)
-    if gemini_result:
-        return gemini_result
-    
     # Final keyword-based fallback (always works)
+    print("🔄 Using keyword fallback as all AI services failed")
     symptoms_lower = symptoms.lower()
     if any(word in symptoms_lower for word in ['chest', 'heart', 'breathing']):
         return '{"specialty": "Cardiologist", "category": "URGENT", "reason": "Chest or heart symptoms require immediate evaluation", "timeline": "Within 24 hours"}'
