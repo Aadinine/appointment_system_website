@@ -234,6 +234,42 @@ def init_openai_client():
             # Restore environment
             os.environ.clear()
             os.environ.update(original_env)
+            
+    except Exception as e:
+        print(f"❌ OpenAI init failed: {e}")
+        return None
+
+# Simple Groq initialization - bypass Railway proxy issues
+groq_client = None
+groq_available = False
+
+def init_groq_simple():
+    """Simple Groq initialization that works on Railway"""
+    try:
+        from groq import Groq
+        # Create client with explicit parameters only
+        client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        return client
+    except Exception as e:
+        print(f"❌ Simple Groq init failed: {e}")
+        return None
+
+# Try to initialize Groq as PRIMARY
+try:
+    if os.getenv("GROQ_API_KEY"):
+        groq_client = init_groq_simple()
+        if groq_client:
+            groq_available = True
+            print("✅ Groq available as PRIMARY service")
+        else:
+            groq_available = False
+            print("❌ Groq failed to initialize")
+    else:
+        groq_available = False
+        print("⚠️ Groq API key not found")
+except Exception as e:
+    groq_available = False
+    print(f"❌ Groq error: {e}")
 
 # OpenAI - keep disabled for now
 openai_client = None
