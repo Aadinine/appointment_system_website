@@ -150,27 +150,47 @@ def get_nearby_doctors(specialty_name, user_location):
     
     return sorted(nearby_doctors, key=lambda x: x["distance"])
 
-# Railway-safe client initialization
+# Railway-safe client initialization - more aggressive approach
 def init_groq_client():
     """Initialize Groq client safely for Railway environment"""
     try:
         from groq import Groq
-        # Remove any proxy-related environment variables that Railway might set
         import os
-        original_env = {}
-        proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'ALL_PROXY', 'all_proxy']
+        
+        # Save and clear ALL environment variables that might cause issues
+        original_env = os.environ.copy()
+        
+        # Clear all proxy-related variables
+        proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy']
         for var in proxy_vars:
-            if var in os.environ:
-                original_env[var] = os.environ[var]
-                del os.environ[var]
+            os.environ.pop(var, None)
+        
+        # Also clear any Groq-specific env vars that Railway might set
+        groq_vars = [k for k in os.environ.keys() if k.lower().startswith('groq')]
+        for var in groq_vars:
+            os.environ.pop(var, None)
         
         try:
+            # Try with minimal parameters
             client = Groq(api_key=os.getenv("GROQ_API_KEY"))
             return client
+        except Exception as e1:
+            print(f"❌ Groq init attempt 1 failed: {e1}")
+            try:
+                # Try without any parameters
+                client = Groq()
+                # Set API key as attribute if possible
+                if hasattr(client, 'api_key'):
+                    client.api_key = os.getenv("GROQ_API_KEY")
+                return client
+            except Exception as e2:
+                print(f"❌ Groq init attempt 2 failed: {e2}")
+                return None
         finally:
-            # Restore original environment variables
-            for var, value in original_env.items():
-                os.environ[var] = value
+            # Restore environment
+            os.environ.clear()
+            os.environ.update(original_env)
+            
     except Exception as e:
         print(f"❌ Groq init failed: {e}")
         return None
@@ -179,22 +199,42 @@ def init_openai_client():
     """Initialize OpenAI client safely for Railway environment"""
     try:
         import openai
-        # Remove any proxy-related environment variables that Railway might set
         import os
-        original_env = {}
-        proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'ALL_PROXY', 'all_proxy']
+        
+        # Save and clear ALL environment variables that might cause issues
+        original_env = os.environ.copy()
+        
+        # Clear all proxy-related variables
+        proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy']
         for var in proxy_vars:
-            if var in os.environ:
-                original_env[var] = os.environ[var]
-                del os.environ[var]
+            os.environ.pop(var, None)
+        
+        # Also clear any OpenAI-specific env vars that Railway might set
+        openai_vars = [k for k in os.environ.keys() if k.lower().startswith('openai')]
+        for var in openai_vars:
+            os.environ.pop(var, None)
         
         try:
+            # Try with minimal parameters
             client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
             return client
+        except Exception as e1:
+            print(f"❌ OpenAI init attempt 1 failed: {e1}")
+            try:
+                # Try without any parameters
+                client = openai.OpenAI()
+                # Set API key as attribute if possible
+                if hasattr(client, 'api_key'):
+                    client.api_key = os.getenv("OPENAI_API_KEY")
+                return client
+            except Exception as e2:
+                print(f"❌ OpenAI init attempt 2 failed: {e2}")
+                return None
         finally:
-            # Restore original environment variables
-            for var, value in original_env.items():
-                os.environ[var] = value
+            # Restore environment
+            os.environ.clear()
+            os.environ.update(original_env)
+            
     except Exception as e:
         print(f"❌ OpenAI init failed: {e}")
         return None
