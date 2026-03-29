@@ -248,6 +248,7 @@ def init_groq_simple():
     try:
         from groq import Groq
         import os
+        import sys
         
         # Debug: Check if API key exists
         api_key = os.getenv("GROQ_API_KEY")
@@ -257,32 +258,66 @@ def init_groq_simple():
         
         print(f"🔑 GROQ_API_KEY found (length: {len(api_key)})")
         
-        # Clear any proxy-related environment variables that Railway might inject
-        proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 
-                     'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy']
-        original_proxy_values = {}
-        for var in proxy_vars:
+        # Save original environment
+        original_env = os.environ.copy()
+        
+        # Clear ALL environment variables that might interfere
+        vars_to_clear = [
+            'HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 
+            'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy',
+            'REQUESTS_CA_BUNDLE', 'CURL_CA_BUNDLE', 'SSL_CERT_FILE'
+        ]
+        
+        # Also clear any variables that might contain proxy-related strings
+        additional_vars = [k for k in os.environ.keys() if any(word in k.lower() for word in ['proxy', 'ca', 'cert', 'ssl'])]
+        
+        for var in vars_to_clear + additional_vars:
             if var in os.environ:
-                original_proxy_values[var] = os.environ[var]
                 del os.environ[var]
+                print(f"🧹 Cleared environment variable: {var}")
+        
+        # Also clear any Groq-specific env vars that Railway might set
+        groq_vars = [k for k in os.environ.keys() if k.lower().startswith('groq')]
+        for var in groq_vars:
+            if var in os.environ:
+                del os.environ[var]
+                print(f"🧹 Cleared Groq env var: {var}")
         
         try:
             print(f"🔧 Attempting to create Groq client with API key: {api_key[:10]}...")
+            
+            # Create a completely clean environment for the import
+            import importlib
+            importlib.reload(sys.modules.get('groq', sys.modules.get('groq._client', None)))
+            
             client = Groq(api_key=api_key)
             print("✅ Groq client created successfully")
             return client
         except Exception as e:
             print(f"❌ Groq client creation failed: {type(e).__name__}: {str(e)}")
             print(f"❌ Full error details: {repr(e)}")
-            # Try alternative approach
+            
+            # Try alternative approach - create client without any parameters
             try:
                 print("🔄 Trying alternative Groq initialization...")
+                
+                # Clear environment again
+                for var in vars_to_clear + additional_vars + groq_vars:
+                    if var in os.environ:
+                        del os.environ[var]
+                
                 client = Groq()
                 print("✅ Groq client created without parameters")
-                # Manually set the API key if the constructor supports it
+                
+                # Try to set API key through different methods
                 if hasattr(client, 'api_key'):
                     client.api_key = api_key
-                    print("✅ API key set manually")
+                    print("✅ API key set via api_key attribute")
+                elif hasattr(client, 'client'):
+                    if hasattr(client.client, 'api_key'):
+                        client.client.api_key = api_key
+                        print("✅ API key set via client.api_key attribute")
+                
                 print("✅ Groq client created with alternative method")
                 return client
             except Exception as e2:
@@ -290,9 +325,9 @@ def init_groq_simple():
                 print(f"❌ Full alternative error: {repr(e2)}")
                 return None
         finally:
-            # Restore proxy variables if they existed
-            for var, value in original_proxy_values.items():
-                os.environ[var] = value
+            # Restore original environment
+            os.environ.clear()
+            os.environ.update(original_env)
                 
     except ImportError as e:
         print(f"❌ Groq library not installed: {e}")
