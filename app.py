@@ -150,14 +150,65 @@ def get_nearby_doctors(specialty_name, user_location):
     
     return sorted(nearby_doctors, key=lambda x: x["distance"])
 
+# Railway-safe client initialization
+def init_groq_client():
+    """Initialize Groq client safely for Railway environment"""
+    try:
+        from groq import Groq
+        # Remove any proxy-related environment variables that Railway might set
+        import os
+        original_env = {}
+        proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'ALL_PROXY', 'all_proxy']
+        for var in proxy_vars:
+            if var in os.environ:
+                original_env[var] = os.environ[var]
+                del os.environ[var]
+        
+        try:
+            client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+            return client
+        finally:
+            # Restore original environment variables
+            for var, value in original_env.items():
+                os.environ[var] = value
+    except Exception as e:
+        print(f"❌ Groq init failed: {e}")
+        return None
+
+def init_openai_client():
+    """Initialize OpenAI client safely for Railway environment"""
+    try:
+        import openai
+        # Remove any proxy-related environment variables that Railway might set
+        import os
+        original_env = {}
+        proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'ALL_PROXY', 'all_proxy']
+        for var in proxy_vars:
+            if var in os.environ:
+                original_env[var] = os.environ[var]
+                del os.environ[var]
+        
+        try:
+            client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            return client
+        finally:
+            # Restore original environment variables
+            for var, value in original_env.items():
+                os.environ[var] = value
+    except Exception as e:
+        print(f"❌ OpenAI init failed: {e}")
+        return None
+
+openai_client = None
+openai_available = False
 try:
-    import openai
-    openai.api_key = os.getenv("OPENAI_API_KEY")
-    openai_available = True
-    print("✅ OpenAI GPT available")
-except ImportError:
-    openai_available = False
-    print("⚠️ OpenAI not available, install with: pip install openai")
+    openai_client = init_openai_client()
+    if openai_client:
+        openai_available = True
+        print("✅ OpenAI GPT available")
+    else:
+        openai_available = False
+        print("❌ OpenAI initialization failed")
 except Exception as e:
     openai_available = False
     print(f"❌ OpenAI error: {e}")
@@ -169,51 +220,23 @@ def get_groq_client():
     """Initialize Groq client only when needed"""
     global groq_client
     if groq_client is None and os.getenv("GROQ_API_KEY"):
-        try:
-            from groq import Groq
-            # Initialize with only the api_key parameter to avoid Railway conflicts
-            groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-            return True
-        except Exception as e:
-            print(f"❌ Groq initialization error: {e}")
-            # Try alternative initialization without any parameters
-            try:
-                groq_client = Groq()
-                # Set API key separately if needed
-                if hasattr(groq_client, 'api_key'):
-                    groq_client.api_key = os.getenv("GROQ_API_KEY")
-                return True
-            except Exception as e2:
-                print(f"❌ Groq alternative initialization failed: {e2}")
-                return False
+        groq_client = init_groq_client()
+        return groq_client is not None
     return groq_client is not None
 
 # Test Groq availability properly (without API call to avoid startup errors)
 try:
-    from groq import Groq
-    # Just test if we can create the client, don't make API call
     if os.getenv("GROQ_API_KEY"):
-        try:
-            test_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        test_client = init_groq_client()
+        if test_client:
             groq_available = True
             print("✅ Groq available")
-        except Exception as e:
-            # Try alternative initialization
-            try:
-                test_client = Groq()
-                if hasattr(test_client, 'api_key'):
-                    test_client.api_key = os.getenv("GROQ_API_KEY")
-                groq_available = True
-                print("✅ Groq available (alternative init)")
-            except Exception as e2:
-                groq_available = False
-                print(f"❌ Groq error: {e2}")
+        else:
+            groq_available = False
+            print("❌ Groq initialization failed")
     else:
         groq_available = False
         print("⚠️ Groq API key not found")
-except ImportError:
-    groq_available = False
-    print("⚠️ Groq not available, install with: pip install groq")
 except Exception as e:
     groq_available = False
     print(f"❌ Groq error: {e}")
@@ -229,14 +252,14 @@ else:
 
 def analyze_with_openai(symptoms):
     """Analyze symptoms using OpenAI GPT (better free tier)"""
-    if not openai_available:
+    if not openai_available or not openai_client:
         return None
         
     try:
         specialties = list(set([doc["specialty"] for doc in doctor_data["specialists"]]))
         specialties_list = ", ".join(specialties)
         
-        response = openai.chat.completions.create(
+        response = openai_client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a medical AI assistant. Respond ONLY with valid JSON. No explanations, no examples, just JSON."},
