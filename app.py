@@ -1,15 +1,24 @@
-from flask import Flask, render_template, request
-import os
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
+from pymongo import MongoClient
 import json
+import os
 import math
-import pymongo
-import uuid
 from datetime import datetime, timedelta
+import uuid
+import hashlib
+import secrets
+import pymongo
 from dotenv import load_dotenv
 
 load_dotenv()
 
 app = Flask(__name__)
+
+# Configure session management
+app.config['SECRET_KEY'] = secrets.token_hex(32)
+app.config['SESSION_PERMANENT'] = False
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 
 # MongoDB Atlas connection
 def get_atlas_connection():
@@ -149,6 +158,91 @@ def get_nearby_doctors(specialty_name, user_location):
             nearby_doctors.append(doctor_with_distance)
     
     return sorted(nearby_doctors, key=lambda x: x["distance"])
+
+# User Authentication Functions
+def hash_password(password):
+    """Hash password using SHA-256"""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def verify_password(password, hashed):
+    """Verify password against hash"""
+    return hashlib.sha256(password.encode()).hexdigest() == hashed
+
+def create_user(name, email, password, phone):
+    """Create a new user in MongoDB"""
+    atlas_db = get_atlas_connection()
+    if atlas_db is None:
+        return False, "Database connection failed"
+    
+    # Check if user already exists
+    existing_user = atlas_db["users"].find_one({"email": email})
+    if existing_user:
+        return False, "User already exists with this email"
+    
+    # Create new user
+    user_data = {
+        "name": name,
+        "email": email,
+        "password": hash_password(password),
+        "phone": phone,
+        "created_at": datetime.now(),
+        "is_active": True
+    }
+    
+    try:
+        result = atlas_db["users"].insert_one(user_data)
+        return True, str(result.inserted_id)
+    except Exception as e:
+        return False, str(e)
+
+def authenticate_user(email, password):
+    """Authenticate user credentials"""
+    atlas_db = get_atlas_connection()
+    if atlas_db is None:
+        return None, "Database connection failed"
+    
+    user = atlas_db["users"].find_one({"email": email})
+    if not user:
+        return None, "Invalid email or password"
+    
+    if not user.get("is_active", True):
+        return None, "Account is deactivated"
+    
+    if verify_password(password, user["password"]):
+        # Convert ObjectId to string for session storage
+        user["_id"] = str(user["_id"])
+        # Remove password from user data before storing in session
+        user.pop("password", None)
+        return user, "Login successful"
+    else:
+        return None, "Invalid email or password"
+
+def get_user_appointments(user_id):
+    """Get all appointments for a specific user"""
+    atlas_db = get_atlas_connection()
+    if atlas_db is None:
+        return []
+    
+    try:
+        appointments = list(atlas_db["appointments"].find({"patient_email": user_id}).sort("appointment_date", 1))
+        # Convert ObjectId to string for JSON serialization
+        for appointment in appointments:
+            appointment["_id"] = str(appointment["_id"])
+        return appointments
+    except Exception as e:
+        print(f"❌ Error getting user appointments: {e}")
+        return []
+
+def login_required(f):
+    """Decorator to require login for routes"""
+    from functools import wraps
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user' not in session:
+            flash('Please log in to access this page', 'warning')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 # Railway-safe client initialization - more aggressive approach
 def init_groq_client():
@@ -575,8 +669,93 @@ def analyze_symptoms(symptoms):
     else:
         return '{"specialty": "General Physician", "category": "ROUTINE", "reason": "General symptoms can be evaluated by primary care", "timeline": "Within 3-7 days"}'
 
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        name = request.form['name']
+        email = request.form['email']
+        password = request.form['password']
+        phone = request.form['phone']
+        
+        # Basic validation
+        if not name or not email or not password or not phone:
+            flash('All fields are required', 'error')
+            return render_template('register.html')
+        
+        if len(password) < 6:
+            flash('Password must be at least 6 characters long', 'error')
+            return render_template('register.html')
+        
+        success, message = create_user(name, email, password, phone)
+        
+        if success:
+            flash('Registration successful! Please log in.', 'success')
+            return redirect(url_for('login'))
+        else:
+            flash(f'Registration failed: {message}', 'error')
+            return render_template('register.html')
+    
+    return render_template('register.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        
+        if not email or not password:
+            flash('Email and password are required', 'error')
+            return render_template('login.html')
+        
+        user, message = authenticate_user(email, password)
+        
+        if user:
+            session['user'] = user
+            flash(f'Welcome back, {user["name"]}!', 'success')
+            return redirect(url_for('dashboard'))
+        else:
+            flash(f'Login failed: {message}', 'error')
+            return render_template('login.html')
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.pop('user', None)
+    flash('You have been logged out successfully', 'info')
+    return redirect(url_for('home'))
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    """User dashboard showing their appointments"""
+    user = session['user']
+    user_id = user['email']  # Using email as user identifier for appointments
+    
+    # Get user's appointments
+    appointments = get_user_appointments(user_id)
+    
+    # Separate upcoming and past appointments
+    upcoming_appointments = []
+    past_appointments = []
+    
+    for appointment in appointments:
+        appointment_date = datetime.strptime(appointment['appointment_date'], '%Y-%m-%d')
+        if appointment_date >= datetime.now().date():
+            upcoming_appointments.append(appointment)
+        else:
+            past_appointments.append(appointment)
+    
+    return render_template('dashboard.html', 
+                         user=user, 
+                         upcoming_appointments=upcoming_appointments,
+                         past_appointments=past_appointments)
+
 @app.route('/')
 def home():
+    # Check if user is logged in
+    if 'user' in session:
+        return redirect(url_for('dashboard'))
     return render_template('index.html')
 
 @app.route('/specialists')
@@ -600,10 +779,12 @@ def specialists():
     return render_template('specialists.html', specialists=specialists_with_distance, user_location=user_location)
 
 @app.route('/book', methods=['GET', 'POST'])
+@login_required
 def book():
     if request.method == 'POST':
         symptoms = request.form['symptoms']
-        name = request.form['name']
+        user = session['user']
+        name = user['name']  # Use logged-in user's name
         ai_result = analyze_symptoms(symptoms)
         
         # Parse AI result to get specialty
@@ -638,14 +819,18 @@ def booking(doctor_id):
     return render_template('booking.html', doctor=doctor, time_slots=time_slots, today=today)
 
 @app.route('/confirm_booking', methods=['POST'])
+@login_required
 def confirm_booking():
+    # Get logged-in user info
+    user = session['user']
+    
     # Get form data
     doctor_id = request.form['doctor_id']
     doctor_name = request.form['doctor_name']
     hospital = request.form['hospital']
-    patient_name = request.form['patient_name']
-    patient_email = request.form['patient_email']
-    patient_phone = request.form['patient_phone']
+    patient_name = user['name']  # Use logged-in user's name
+    patient_email = user['email']  # Use logged-in user's email
+    patient_phone = user['phone']  # Use logged-in user's phone
     appointment_date = request.form['appointment_date']
     time_slot = request.form['time_slot']
     symptoms = request.form.get('symptoms', '')
