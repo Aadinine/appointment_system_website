@@ -171,11 +171,21 @@ def get_groq_client():
     if groq_client is None and os.getenv("GROQ_API_KEY"):
         try:
             from groq import Groq
+            # Initialize with only the api_key parameter to avoid Railway conflicts
             groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
             return True
         except Exception as e:
             print(f"❌ Groq initialization error: {e}")
-            return False
+            # Try alternative initialization without any parameters
+            try:
+                groq_client = Groq()
+                # Set API key separately if needed
+                if hasattr(groq_client, 'api_key'):
+                    groq_client.api_key = os.getenv("GROQ_API_KEY")
+                return True
+            except Exception as e2:
+                print(f"❌ Groq alternative initialization failed: {e2}")
+                return False
     return groq_client is not None
 
 # Test Groq availability properly (without API call to avoid startup errors)
@@ -183,9 +193,21 @@ try:
     from groq import Groq
     # Just test if we can create the client, don't make API call
     if os.getenv("GROQ_API_KEY"):
-        test_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-        groq_available = True
-        print("✅ Groq available")
+        try:
+            test_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+            groq_available = True
+            print("✅ Groq available")
+        except Exception as e:
+            # Try alternative initialization
+            try:
+                test_client = Groq()
+                if hasattr(test_client, 'api_key'):
+                    test_client.api_key = os.getenv("GROQ_API_KEY")
+                groq_available = True
+                print("✅ Groq available (alternative init)")
+            except Exception as e2:
+                groq_available = False
+                print(f"❌ Groq error: {e2}")
     else:
         groq_available = False
         print("⚠️ Groq API key not found")
