@@ -178,18 +178,17 @@ def get_groq_client():
             return False
     return groq_client is not None
 
-# Test Groq availability properly
+# Test Groq availability properly (without API call to avoid startup errors)
 try:
     from groq import Groq
-    test_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-    # Try a simple test to see if it works
-    test_response = test_client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[{"role": "user", "content": "test"}],
-        max_tokens=1
-    )
-    groq_available = True
-    print("✅ Groq available")
+    # Just test if we can create the client, don't make API call
+    if os.getenv("GROQ_API_KEY"):
+        test_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        groq_available = True
+        print("✅ Groq available")
+    else:
+        groq_available = False
+        print("⚠️ Groq API key not found")
 except ImportError:
     groq_available = False
     print("⚠️ Groq not available, install with: pip install groq")
