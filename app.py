@@ -239,39 +239,35 @@ def init_openai_client():
         print(f"❌ OpenAI init failed: {e}")
         return None
 
+# OpenAI - keep disabled for now
 openai_client = None
 openai_available = False
-print("❌ OpenAI temporarily disabled due to Railway proxy issues")
+print("❌ OpenAI disabled - focusing on Groq primary")
 
-groq_client = None
-groq_available = False
-print("❌ Groq temporarily disabled due to Railway proxy issues")
+# Gemini as BACKUP - only initialize if Groq fails
+gemini_available = False
+if not groq_available:
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        # Test Gemini
+        test_response = model.generate_content("test")
+        if test_response.text:
+            gemini_available = True
+            print("✅ Gemini available as BACKUP service")
+        else:
+            gemini_available = False
+            print("❌ Gemini test failed")
+    except Exception as e:
+        gemini_available = False
+        print(f"❌ Gemini backup error: {e}")
+else:
+    print("ℹ️ Gemini backup not needed - Groq is working")
 
 def get_groq_client():
-    """Initialize Groq client only when needed - DISABLED"""
-    return False
-
-# Test Groq availability properly - DISABLED
-groq_available = False
-print("❌ Groq disabled - will fix after Gemini confirmed working")
-
-# Setup Gemini as PRIMARY service - ensure it works
-try:
-    import google.generativeai as genai
-    genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-    model = genai.GenerativeModel('gemini-2.5-flash')
-    # Test Gemini with a simple call to verify it works
-    test_response = model.generate_content("test")
-    if test_response.text:
-        gemini_available = True
-        print("✅ Gemini available and working as PRIMARY service")
-    else:
-        gemini_available = False
-        print("❌ Gemini test failed - no response")
-except Exception as e:
-    gemini_available = False
-    print(f"❌ Gemini error: {e}")
-    print("⚠️ All AI services currently disabled - will use keyword fallback")
+    """Get Groq client - simple approach"""
+    return groq_client is not None
 
 def analyze_with_openai(symptoms):
     """Analyze symptoms using OpenAI GPT (better free tier)"""
@@ -416,18 +412,19 @@ Return JSON format: {{"specialty": "specialty_name", "category": "URGENT/ROUTINE
         return None
 
 def analyze_symptoms(symptoms):
-    """Smart symptom analysis with Gemini as PRIMARY (Groq/OpenAI disabled)"""
+    """Smart symptom analysis with Groq PRIMARY, Gemini BACKUP"""
     
-    # Use Gemini as PRIMARY service (Groq/OpenAI disabled due to Railway issues)
-    gemini_result = analyze_with_gemini(symptoms)
-    if gemini_result:
-        print("🎯 Using Gemini as PRIMARY AI service")
-        return gemini_result
-    
-    # Try Groq (disabled but keeping for structure)
+    # Try Groq first as PRIMARY service
     groq_result = analyze_with_groq(symptoms)
     if groq_result:
+        print("🎯 Using Groq as PRIMARY AI service")
         return groq_result
+    
+    # Use Gemini as BACKUP if Groq fails
+    gemini_result = analyze_with_gemini(symptoms)
+    if gemini_result:
+        print("🔄 Using Gemini as BACKUP AI service")
+        return gemini_result
     
     # Try OpenAI (disabled but keeping for structure)
     openai_result = analyze_with_openai(symptoms)
