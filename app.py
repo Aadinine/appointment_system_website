@@ -234,10 +234,6 @@ def init_openai_client():
             # Restore environment
             os.environ.clear()
             os.environ.update(original_env)
-            
-    except Exception as e:
-        print(f"❌ OpenAI init failed: {e}")
-        return None
 
 # OpenAI - keep disabled for now
 openai_client = None
