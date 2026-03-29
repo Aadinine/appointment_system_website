@@ -3,15 +3,201 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Appointment System</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Smart Appointment System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .hero-container {
+            text-align: center;
+            color: white;
+            max-width: 800px;
+            padding: 60px 40px;
+        }
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .hero-subtitle {
+            font-size: 1.3rem;
+            margin-bottom: 40px;
+            opacity: 0.9;
+        }
+        .btn-hero {
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 50px;
+            margin: 10px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-primary-hero {
+            background: white;
+            color: #667eea;
+            border: 2px solid white;
+        }
+        .btn-primary-hero:hover {
+            background: transparent;
+            color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+        .btn-outline-hero {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+        .btn-outline-hero:hover {
+            background: white;
+            color: #667eea;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+        .features {
+            margin-top: 60px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+        }
+        .feature {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s ease;
+        }
+        .feature:hover {
+            transform: translateY(-5px);
+        }
+        .feature i {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            color: white;
+        }
+        .auth-buttons {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+        .auth-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 20px;
+            border-radius: 20px;
+            text-decoration: none;
+            margin-left: 10px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        .auth-btn:hover {
+            background: white;
+            color: #667eea;
+            transform: translateY(-2px);
+        }
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🏥 Distributed Appointment Booking System</h1>
-        <p class="subtitle">AI-powered doctor recommendations for your healthcare needs</p>
-        <a href="/book" class="btn">Book Appointment</a>
-        <a href="/specialists" class="btn">View Specialists</a>
+    <!-- Auth Buttons -->
+    <div class="auth-buttons">
+        <a href="{{ url_for('login') }}" class="auth-btn">
+            <i class="fas fa-sign-in-alt me-2"></i>Login
+        </a>
+        <a href="{{ url_for('register') }}" class="auth-btn">
+            <i class="fas fa-user-plus me-2"></i>Register
+        </a>
     </div>
+
+    <!-- Hero Section -->
+    <div class="hero-container">
+        <div class="pulse">
+            <i class="fas fa-hospital fa-4x mb-4"></i>
+        </div>
+        <h1 class="hero-title">Smart Appointment System</h1>
+        <p class="hero-subtitle">AI-powered doctor recommendations and personalized healthcare booking</p>
+        
+        <div class="hero-actions">
+            <a href="{{ url_for('register') }}" class="btn-hero btn-primary-hero">
+                <i class="fas fa-rocket me-2"></i>Get Started
+            </a>
+            <a href="{{ url_for('specialists') }}" class="btn-hero btn-outline-hero">
+                <i class="fas fa-search me-2"></i>Browse Doctors
+            </a>
+        </div>
+
+        <!-- Features -->
+        <div class="features">
+            <div class="feature">
+                <i class="fas fa-robot"></i>
+                <h5>AI-Powered Analysis</h5>
+                <p>Smart symptom analysis with multiple AI services</p>
+            </div>
+            <div class="feature">
+                <i class="fas fa-user-md"></i>
+                <h5>Expert Doctors</h5>
+                <p>Connect with specialized healthcare professionals</p>
+            </div>
+            <div class="feature">
+                <i class="fas fa-calendar-check"></i>
+                <h5>Easy Booking</h5>
+                <p>Simple and intuitive appointment scheduling</p>
+            </div>
+            <div class="feature">
+                <i class="fas fa-shield-alt"></i>
+                <h5>Secure & Private</h5>
+                <p>Your health data is protected and confidential</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="position-fixed top-0 end-0 p-3" style="z-index: 1050;">
+                {% for category, message in messages %}
+                    <div class="toast show" role="alert">
+                        <div class="toast-header">
+                            <i class="fas fa-{{ 'check-circle text-success' if category == 'success' else 'exclamation-circle text-' + category }} me-2"></i>
+                            <strong class="me-auto">Notification</strong>
+                            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+                        </div>
+                        <div class="toast-body">
+                            {{ message }}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Auto-hide toasts after 5 seconds
+        setTimeout(function() {
+            const toasts = document.querySelectorAll('.toast');
+            toasts.forEach(toast => {
+                toast.classList.remove('show');
+            });
+        }, 5000);
+    </script>
 </body>
 </html>
