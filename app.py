@@ -244,14 +244,56 @@ groq_client = None
 groq_available = False
 
 def init_groq_simple():
-    """Simple Groq initialization that works on Railway"""
+    """Railway-safe Groq initialization"""
     try:
         from groq import Groq
-        # Create client with explicit parameters only
-        client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-        return client
+        import os
+        
+        # Debug: Check if API key exists
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            print("❌ GROQ_API_KEY not found in environment")
+            return None
+        
+        print(f"🔑 GROQ_API_KEY found (length: {len(api_key)})")
+        
+        # Clear any proxy-related environment variables that Railway might inject
+        proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 
+                     'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy']
+        original_proxy_values = {}
+        for var in proxy_vars:
+            if var in os.environ:
+                original_proxy_values[var] = os.environ[var]
+                del os.environ[var]
+        
+        try:
+            # Try creating client with explicit API key only
+            client = Groq(api_key=api_key)
+            print("✅ Groq client created successfully")
+            return client
+        except Exception as e:
+            print(f"❌ Groq client creation failed: {e}")
+            # Try alternative approach
+            try:
+                client = Groq()
+                # Manually set the API key if the constructor supports it
+                if hasattr(client, 'api_key'):
+                    client.api_key = api_key
+                print("✅ Groq client created with alternative method")
+                return client
+            except Exception as e2:
+                print(f"❌ Alternative Groq init failed: {e2}")
+                return None
+        finally:
+            # Restore proxy variables if they existed
+            for var, value in original_proxy_values.items():
+                os.environ[var] = value
+                
+    except ImportError as e:
+        print(f"❌ Groq library not installed: {e}")
+        return None
     except Exception as e:
-        print(f"❌ Simple Groq init failed: {e}")
+        print(f"❌ Unexpected Groq init error: {e}")
         return None
 
 # Try to initialize Groq as PRIMARY
@@ -625,13 +667,34 @@ def health_check():
 
 @app.route('/debug')
 def debug_info():
+    import os
+    
+    # Get detailed Groq info
+    groq_key = os.getenv("GROQ_API_KEY")
+    groq_key_info = {
+        "exists": "✅ Set" if groq_key else "❌ Missing",
+        "length": len(groq_key) if groq_key else 0,
+        "starts_with_gsk": groq_key.startswith("gsk_") if groq_key else False
+    }
+    
+    # Check for proxy variables
+    proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 
+                 'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy']
+    proxy_info = {}
+    for var in proxy_vars:
+        if var in os.environ:
+            proxy_info[var] = "✅ Set"
+        else:
+            proxy_info[var] = "❌ Not Set"
+    
     return {
         "environment_variables": {
             "GEMINI_API_KEY": "✅ Set" if os.getenv("GEMINI_API_KEY") else "❌ Missing",
             "OPENAI_API_KEY": "✅ Set" if os.getenv("OPENAI_API_KEY") else "❌ Missing",
-            "GROQ_API_KEY": "✅ Set" if os.getenv("GROQ_API_KEY") else "❌ Missing",
+            "GROQ_API_KEY": groq_key_info,
             "ATLAS_CONNECTION_STRING": "✅ Set" if os.getenv("ATLAS_CONNECTION_STRING") else "❌ Missing"
         },
+        "proxy_variables": proxy_info,
         "api_status": {
             "OpenAI": "✅ Available" if openai_available else "❌ Not Available",
             "Groq": "✅ Available" if groq_available else "❌ Not Available",
