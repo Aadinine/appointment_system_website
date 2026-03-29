@@ -267,22 +267,27 @@ def init_groq_simple():
                 del os.environ[var]
         
         try:
-            # Try creating client with explicit API key only
+            print(f"🔧 Attempting to create Groq client with API key: {api_key[:10]}...")
             client = Groq(api_key=api_key)
             print("✅ Groq client created successfully")
             return client
         except Exception as e:
-            print(f"❌ Groq client creation failed: {e}")
+            print(f"❌ Groq client creation failed: {type(e).__name__}: {str(e)}")
+            print(f"❌ Full error details: {repr(e)}")
             # Try alternative approach
             try:
+                print("🔄 Trying alternative Groq initialization...")
                 client = Groq()
+                print("✅ Groq client created without parameters")
                 # Manually set the API key if the constructor supports it
                 if hasattr(client, 'api_key'):
                     client.api_key = api_key
+                    print("✅ API key set manually")
                 print("✅ Groq client created with alternative method")
                 return client
             except Exception as e2:
-                print(f"❌ Alternative Groq init failed: {e2}")
+                print(f"❌ Alternative Groq init failed: {type(e2).__name__}: {str(e2)}")
+                print(f"❌ Full alternative error: {repr(e2)}")
                 return None
         finally:
             # Restore proxy variables if they existed
