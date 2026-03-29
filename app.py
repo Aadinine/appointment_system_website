@@ -276,8 +276,8 @@ def init_groq_simple():
                 del os.environ[var]
                 print(f"🧹 Cleared environment variable: {var}")
         
-        # Also clear any Groq-specific env vars that Railway might set
-        groq_vars = [k for k in os.environ.keys() if k.lower().startswith('groq')]
+        # Also clear any Groq-specific env vars that Railway might set EXCEPT the API key
+        groq_vars = [k for k in os.environ.keys() if k.lower().startswith('groq') and k != 'GROQ_API_KEY']
         for var in groq_vars:
             if var in os.environ:
                 del os.environ[var]
