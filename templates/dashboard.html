@@ -299,7 +299,7 @@
                     <div class="tab-pane fade" id="past" role="tabpanel">
                         {% if past_appointments %}
                             {% for appointment in past_appointments %}
-                            <div class="appointment-card past">
+                            <div class="appointment-card">
                                 <div class="row align-items-center">
                                     <div class="col-md-8">
                                         <h6 class="mb-2">
@@ -318,10 +318,21 @@
                                         {% endif %}
                                     </div>
                                     <div class="col-md-4 text-md-end">
-                                        <span class="status-badge status-past">Completed</span>
+                                        {% if appointment.get('status') == 'cancelled' %}
+                                            <span class="status-badge status-cancelled">Cancelled</span>
+                                        {% else %}
+                                            <span class="status-badge status-past">Completed</span>
+                                        {% endif %}
                                         <div class="mt-2">
                                             <small class="text-muted">ID: {{ appointment.appointment_id }}</small>
                                         </div>
+                                        {% if appointment.get('status') == 'cancelled' %}
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                Cancelled on: {{ appointment.cancelled_at_formatted if appointment.cancelled_at_formatted else 'Unknown' }}
+                                            </small>
+                                        </div>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>

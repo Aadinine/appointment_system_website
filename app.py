@@ -204,6 +204,15 @@ def get_user_appointments(user_id):
             # Keep original date for parsing, add formatted date for display
             original_date = appointment['appointment_date']
             appointment["formatted_date"] = datetime.strptime(appointment['appointment_date'], '%Y-%m-%d').strftime('%B %d, %Y')
+            
+            # Format cancelled_at date if it exists
+            if appointment.get('cancelled_at'):
+                cancelled_at = appointment['cancelled_at']
+                if isinstance(cancelled_at, str):
+                    cancelled_at = datetime.fromisoformat(cancelled_at.replace('Z', '+00:00'))
+                appointment["cancelled_at_formatted"] = cancelled_at.strftime('%B %d, %Y at %I:%M %p')
+            else:
+                appointment["cancelled_at_formatted"] = None
         return appointments
     except Exception as e:
         print(f"❌ Error getting user appointments: {e}")
@@ -742,6 +751,17 @@ def appointment_bill(appointment_id):
         appointment["_id"] = str(appointment["_id"])
         appointment["appointment_id"] = str(appointment["_id"])[-6:].upper()
         appointment["appointment_date"] = datetime.strptime(appointment['appointment_date'], '%Y-%m-%d').strftime('%B %d, %Y')
+        
+        # Format cancelled_at date if it exists
+        if appointment.get('cancelled_at'):
+            # Handle both string and datetime formats
+            cancelled_at = appointment['cancelled_at']
+            if isinstance(cancelled_at, str):
+                cancelled_at = datetime.fromisoformat(cancelled_at.replace('Z', '+00:00'))
+            appointment["cancelled_at_formatted"] = cancelled_at.strftime('%B %d, %Y at %I:%M %p')
+        else:
+            appointment["cancelled_at_formatted"] = None
+        
         appointment["specialty"] = specialty
         
         return render_template('appointment_bill.html', appointment=appointment)
