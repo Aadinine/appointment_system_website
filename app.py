@@ -442,7 +442,16 @@ def dashboard():
     
     for appointment in appointments:
         appointment_date = datetime.strptime(appointment['appointment_date'], '%Y-%m-%d').date()
-        if appointment_date >= datetime.now().date():
+        appointment_time = datetime.strptime(appointment['time_slot'], '%H:%M').time()
+        current_time = datetime.now().time()
+        
+        # Check if appointment is today and time has passed
+        if appointment_date == datetime.now().date():
+            if appointment_time >= current_time:
+                upcoming_appointments.append(appointment)
+            else:
+                past_appointments.append(appointment)
+        elif appointment_date > datetime.now().date():
             upcoming_appointments.append(appointment)
         else:
             past_appointments.append(appointment)
@@ -484,6 +493,9 @@ def book():
                 else:
                     doctor["distance"] = 0
             
+            # Sort doctors by distance (ascending)
+            nearby_doctors.sort(key=lambda x: x.get("distance", float('inf')))
+            
             return render_template('result.html', name=name, symptoms=symptoms, ai=ai_result, 
                                  ai_data=ai_data, nearby_doctors=nearby_doctors, user_location={"lat": 28.6139, "lng": 77.2090})
         except Exception as e:
@@ -522,6 +534,7 @@ def confirm_booking():
     doctor_id = request.form.get('doctor_id')
     doctor_name = request.form.get('doctor_name')
     hospital = request.form.get('hospital')
+    specialty = request.form.get('specialty', '')
     appointment_date = request.form.get('appointment_date')
     time_slot = request.form.get('time_slot')
     symptoms = request.form.get('symptoms', '')
@@ -542,6 +555,7 @@ def confirm_booking():
                 "doctor_id": doctor_id,
                 "doctor_name": doctor_name,
                 "hospital": hospital,
+                "specialty": specialty,
                 "appointment_date": appointment_date,
                 "time_slot": time_slot,
                 "symptoms": symptoms,
@@ -601,8 +615,10 @@ def get_time_slots(doctor_id, date):
             for minute in [0, 30]:  # :00 and :30
                 time_str = f"{hour:02d}:{minute:02d}"
                 
-                # Skip lunch break slots entirely (12:00-14:00)
-                if hour == 12 or (hour == 13):
+                # Skip lunch break slots (12:30-14:00)
+                if hour == 12 and minute == 30:
+                    continue
+                if hour == 13:
                     continue
                 
                 # Create datetime for this slot

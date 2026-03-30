@@ -254,8 +254,8 @@
                                 <i class="fas fa-calendar-times"></i>
                                 <h5>No Upcoming Appointments</h5>
                                 <p class="text-muted">You don't have any appointments scheduled.</p>
-                                <a href="{{ url_for('book') }}" class="btn btn-primary btn-action">
-                                    <i class="fas fa-plus me-2"></i>Book Your First Appointment
+                                <a href="{{ url_for('book') }}" class="btn btn-primary btn-action" style="display: inline-flex; align-items: center;">
+                                    <i class="fas fa-plus me-2" style="align-self: center;"></i>Book Your First Appointment
                                 </a>
                             </div>
                         {% endif %}
@@ -273,9 +273,6 @@
                                         </h6>
                                         <p class="mb-1">
                                             <i class="fas fa-hospital me-2"></i>{{ appointment.hospital }}
-                                        </p>
-                                        <p class="mb-1">
-                                            <i class="fas fa-stethoscope me-2"></i>{{ appointment.specialty }}
                                         </p>
                                         <p class="mb-1">
                                             <i class="fas fa-calendar me-2"></i>{{ appointment.formatted_date }} at {{ appointment.time_slot }}
