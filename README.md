@@ -5,20 +5,39 @@ A comprehensive web-based appointment booking system with AI-powered doctor reco
 ## 🌟 Features
 
 ### 🤖 AI-Powered Doctor Recommendations
-- **Symptom Analysis**: Uses Google Gemini AI to analyze symptoms and recommend appropriate medical specialties
+- **Multi-AI Support**: Uses Groq, Gemini, and OpenAI for symptom analysis
 - **Smart Matching**: Matches patients with nearby doctors based on their condition and location
 - **Priority Assessment**: Categorizes appointments as URGENT, ROUTINE, or NORMAL
+- **Distance-Based Sorting**: Doctors displayed in ascending order of distance
+- **Fallback Analysis**: Keyword-based analysis if AI services fail
 
 ### 📅 Real-Time Appointment Booking
-- **Time Slot Management**: 30-minute slots from 9:00 AM to 5:00 PM
-- **Live Availability**: Real-time status updates showing available, booked, and past time slots
+- **Extended Hours**: 30-minute slots from 9:00 AM to 9:00 PM
+- **Lunch Break Management**: 12:00 PM available, 12:30-14:00 skipped
+- **Live Availability**: Real-time status updates showing available, booked, unavailable, and past time slots
 - **Date-Based Scheduling**: Dynamic time slot updates when changing dates
-- **Double Booking Prevention**: Server-side validation prevents duplicate appointments
+- **Double Booking Prevention**: Server-side validation with race condition protection
+- **Smart Time Validation**: Prevents booking past time slots on current date
+
+### 👥 User Management & Dashboard
+- **Session-Based Authentication**: Secure user login with session management
+- **Personal Dashboard**: View upcoming and past appointments
+- **Smart Appointment Classification**: Automatic past/upcoming based on date AND time
+- **Clickable Appointment Cards**: Direct access to appointment details
+- **Professional UI**: Clean, responsive dashboard with proper spacing
+
+### 📋 Appointment Management
+- **Complete Booking Workflow**: From symptom input to confirmation
+- **Professional Receipts**: Detailed appointment information with unique IDs
+- **Calendar Integration**: Add appointments to Google Calendar
+- **Print Functionality**: Printable appointment receipts
+- **Appointment Bills**: Professional information pages without payment details
 
 ### 🗺️ Location-Based Services
 - **Distance Calculation**: Haversine formula for accurate distance measurements
 - **Nearby Doctors**: Shows doctors sorted by proximity to user's location
 - **Hospital Information**: Complete details including address, phone, and availability
+- **User Location**: Delhi-based coordinates for distance calculations
 
 ### ☁️ Cloud Database Integration
 - **MongoDB Atlas**: Cloud-based data storage for scalability
@@ -94,7 +113,7 @@ ATLAS_CONNECTION_STRING=your_mongodb_atlas_connection_string
 
 ```
 appointment-system/
-├── app.py                 # Main Flask application
+├── app.py                 # Main Flask application with all features
 ├── atlas_setup.py         # MongoDB Atlas initialization
 ├── setup_appointments.py  # Sample appointment data
 ├── requirements.txt       # Python dependencies
@@ -102,15 +121,19 @@ appointment-system/
 ├── data/
 │   └── doctors.json       # Doctor data (fallback)
 ├── static/
-│   └── style.css          # Application styles
-└── templates/
-    ├── index.html         # Home page
-    ├── book.html          # Symptom input
-    ├── result.html        # Doctor recommendations
-    ├── specialists.html   # All specialists
-    ├── booking.html       # Appointment booking
-    ├── confirmation.html  # Booking confirmation
-    └── booking_error.html # Booking error page
+│   └── style.css          # Complete application styles
+├── templates/
+│   ├── index.html         # Home page with AI analysis
+│   ├── book.html          # Symptom input form
+│   ├── result.html        # AI doctor recommendations
+│   ├── specialists.html   # All specialists (horizontal layout)
+│   ├── booking.html       # Appointment booking with time slots
+│   ├── confirmation.html  # Booking confirmation page
+│   ├── appointment_bill.html # Professional appointment receipts
+│   ├── dashboard.html     # User dashboard with appointments
+│   ├── login.html         # User authentication
+│   └── register.html      # User registration
+└── flask_session/         # Session storage (auto-generated)
 ```
 
 ## 🎯 Usage Guide
@@ -198,12 +221,22 @@ appointment-system/
 ## 🔄 API Endpoints
 
 ### Web Routes
-- `GET /` - Home page
-- `GET /specialists` - All specialists with distance
-- `GET/POST /book` - Symptom analysis
-- `GET /booking/<doctor_id>` - Booking page
-- `POST /confirm_booking` - Process booking
-- `GET /get_time_slots/<doctor_id>/<date>` - Time slots API
+- `GET /` - Home page with AI symptom analysis
+- `GET /specialists` - All specialists with distance (horizontal layout)
+- `GET/POST /book` - Symptom analysis and AI recommendations
+- `GET /booking/<doctor_id>` - Booking page with time slots
+- `POST /confirm_booking` - Process booking and save to database
+- `GET /get_time_slots/<doctor_id>/<date>` - Time slots API with real-time status
+- `GET /dashboard` - User dashboard with appointments
+- `GET/POST /login` - User authentication
+- `GET /logout` - User logout
+- `GET /register` - User registration
+- `GET /appointment_bill/<appointment_id>` - Professional appointment receipt
+
+### User Management Routes
+- `POST /register` - Create new user account
+- `POST /login` - Authenticate user and create session
+- Session management with 24-hour expiry
 
 ### API Responses
 ```json
@@ -218,6 +251,11 @@ appointment-system/
       "time": "09:30",
       "available": true,
       "status": "available"
+    },
+    {
+      "time": "11:30",
+      "available": false,
+      "status": "past"
     }
   ]
 }
@@ -280,13 +318,28 @@ For issues and questions:
 
 ## 🔄 Version History
 
-- **v1.0.0** - Initial release with complete booking system
-- Future versions will include:
-  - User authentication
+- **v2.0.0** - Complete production-ready system with user authentication
+  - Added user login/registration system with session management
+  - Professional dashboard with appointment management
+  - Multi-AI support (Groq, Gemini, OpenAI)
+  - Extended hours (9 AM - 9 PM) with 12:00 PM slot
+  - Distance-based doctor sorting
+  - Appointment receipts and calendar integration
+  - Double booking prevention with race condition protection
+  - Smart time validation (date + time)
+  - Professional UI/UX improvements
+
+- **v1.0.0** - Initial release with basic booking system
+  - AI-powered symptom analysis
+  - Basic appointment booking
+  - MongoDB Atlas integration
+  - Distance calculations
+
+- **Future versions** may include:
   - Email notifications
-  - Calendar integration
   - Payment processing
   - Telemedicine features
+  - Mobile app development
 
 ## 📈 Performance
 
