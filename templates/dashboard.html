@@ -61,9 +61,14 @@
             font-size: 0.85rem;
             font-weight: 600;
         }
-        .status-upcoming {
-            background: #d4edda;
-            color: #155724;
+        .status-badge.status-upcoming {
+            background: #28a745;
+            color: white;
+        }
+        
+        .status-badge.status-cancelled {
+            background: #dc3545;
+            color: white;
         }
         .status-past {
             background: #f8f9fa;
@@ -91,6 +96,18 @@
         .quick-actions .btn {
             margin: 0;
             padding: 12px 24px;
+        }
+        
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 0.875rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-sm:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
         }
         .empty-state {
             text-align: center;
@@ -241,10 +258,27 @@
                                         {% endif %}
                                     </div>
                                     <div class="col-md-4 text-md-end">
-                                        <span class="status-badge status-upcoming">Upcoming</span>
+                                        {% if appointment.get('status') == 'cancelled' %}
+                                            <span class="status-badge status-cancelled">Cancelled</span>
+                                        {% else %}
+                                            <span class="status-badge status-upcoming">Upcoming</span>
+                                        {% endif %}
                                         <div class="mt-2">
                                             <small class="text-muted">ID: {{ appointment.appointment_id }}</small>
                                         </div>
+                                        {% if appointment.get('status') == 'cancelled' %}
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                Cancelled on: {{ appointment.get('cancelled_at', '') | strftime('%B %d, %Y at %I:%M %p') if appointment.get('cancelled_at') else 'Unknown' }}
+                                            </small>
+                                        </div>
+                                        {% else %}
+                                        <div class="mt-2">
+                                            <button class="btn btn-sm btn-danger" onclick="cancelAppointment('{{ appointment._id }}', '{{ appointment.appointment_id }}')">
+                                                <i class="fas fa-times me-1"></i>Cancel
+                                            </button>
+                                        </div>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -351,6 +385,84 @@
         function showAppointmentBill(appointmentId) {
             // Redirect to appointment bill page
             window.location.href = `/appointment_bill/${appointmentId}`;
+        }
+        
+        // Cancel appointment function
+        function cancelAppointment(appointmentId, appointmentDisplayId) {
+            if (confirm(`Are you sure you want to cancel appointment #${appointmentDisplayId}?`)) {
+                fetch(`/cancel_appointment/${appointmentId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Show success message
+                        const toastHtml = `
+                            <div class="toast show" role="alert">
+                                <div class="toast-header">
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    <strong class="me-auto">Success</strong>
+                                    <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+                                </div>
+                                <div class="toast-body">
+                                    Appointment #${appointmentDisplayId} has been cancelled successfully.
+                                </div>
+                            </div>
+                        `;
+                        
+                        // Add toast to container
+                        const toastContainer = document.querySelector('.toast-container');
+                        toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+                        
+                        // Refresh page after 2 seconds
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    } else {
+                        // Show error message
+                        const toastHtml = `
+                            <div class="toast show" role="alert">
+                                <div class="toast-header">
+                                    <i class="fas fa-exclamation-circle text-danger me-2"></i>
+                                    <strong class="me-auto">Error</strong>
+                                    <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+                                </div>
+                                <div class="toast-body">
+                                    ${data.message || 'Failed to cancel appointment. Please try again.'}
+                                </div>
+                            </div>
+                        `;
+                        
+                        // Add toast to container
+                        const toastContainer = document.querySelector('.toast-container');
+                        toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    // Show error message
+                    const toastHtml = `
+                        <div class="toast show" role="alert">
+                            <div class="toast-header">
+                                <i class="fas fa-exclamation-circle text-danger me-2"></i>
+                                <strong class="me-auto">Error</strong>
+                                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+                            </div>
+                            <div class="toast-body">
+                                Failed to cancel appointment. Please try again.
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Add toast to container
+                    const toastContainer = document.querySelector('.toast-container');
+                    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+                });
+            }
         }
     </script>
 </body>

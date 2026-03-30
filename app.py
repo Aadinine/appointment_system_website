@@ -448,11 +448,17 @@ def dashboard():
         # Check if appointment is today and time has passed
         if appointment_date == datetime.now().date():
             if appointment_time >= current_time:
-                upcoming_appointments.append(appointment)
+                if appointment.get('status') == 'cancelled':
+                    past_appointments.append(appointment)
+                else:
+                    upcoming_appointments.append(appointment)
             else:
                 past_appointments.append(appointment)
         elif appointment_date > datetime.now().date():
-            upcoming_appointments.append(appointment)
+            if appointment.get('status') != 'cancelled':
+                upcoming_appointments.append(appointment)
+            else:
+                past_appointments.append(appointment)
         else:
             past_appointments.append(appointment)
     
@@ -603,7 +609,8 @@ def get_time_slots(doctor_id, date):
             try:
                 appointments = list(atlas_db["appointments"].find({
                     "doctor_id": doctor_id,
-                    "appointment_date": date
+                    "appointment_date": date,
+                    "status": {"$ne": "cancelled"}  # Exclude cancelled appointments
                 }))
                 booked_slots = [apt["time_slot"] for apt in appointments]
             except:
@@ -668,6 +675,44 @@ def get_time_slots(doctor_id, date):
     except Exception as e:
         print(f"❌ Time slots error: {e}")
         return jsonify({"error": "Failed to load time slots", "details": str(e)}), 500
+
+@app.route('/cancel_appointment/<appointment_id>', methods=['POST'])
+@login_required
+def cancel_appointment(appointment_id):
+    """Cancel an appointment"""
+    user = session['user']
+    
+    try:
+        # Get appointment from database
+        atlas_db = get_atlas_connection()
+        if atlas_db is None:
+            return jsonify({"success": False, "message": "Database connection error"})
+        
+        appointment = atlas_db["appointments"].find_one({"_id": ObjectId(appointment_id)})
+        
+        if not appointment or appointment["patient_email"] != user['email']:
+            return jsonify({"success": False, "message": "Appointment not found"})
+        
+        # Check if appointment is in the future (can only cancel upcoming appointments)
+        appointment_datetime = datetime.strptime(f"{appointment['appointment_date']} {appointment['time_slot']}", '%Y-%m-%d %H:%M')
+        if appointment_datetime <= datetime.now():
+            return jsonify({"success": False, "message": "Cannot cancel past appointments"})
+        
+        # Update appointment status to cancelled
+        result = atlas_db["appointments"].update_one(
+            {"_id": ObjectId(appointment_id)},
+            {"$set": {"status": "cancelled", "cancelled_at": datetime.now()}}
+        )
+        
+        if result.modified_count > 0:
+            print(f"✅ Appointment {appointment_id} cancelled by user {user['email']}")
+            return jsonify({"success": True, "message": "Appointment cancelled successfully"})
+        else:
+            return jsonify({"success": False, "message": "Failed to cancel appointment"})
+            
+    except Exception as e:
+        print(f"❌ Error cancelling appointment: {e}")
+        return jsonify({"success": False, "message": "An error occurred while cancelling appointment"})
 
 @app.route('/appointment_bill/<appointment_id>')
 @login_required
