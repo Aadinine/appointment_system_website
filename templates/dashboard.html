@@ -269,12 +269,12 @@
                                         {% if appointment.get('status') == 'cancelled' %}
                                         <div class="mt-2">
                                             <small class="text-muted">
-                                                Cancelled on: {{ appointment.get('cancelled_at', '') | strftime('%B %d, %Y at %I:%M %p') if appointment.get('cancelled_at') else 'Unknown' }}
+                                                Cancelled on: {{ appointment.cancelled_at_formatted if appointment.cancelled_at_formatted else 'Unknown' }}
                                             </small>
                                         </div>
                                         {% else %}
                                         <div class="mt-2">
-                                            <button class="btn btn-sm btn-danger" onclick="cancelAppointment('{{ appointment._id }}', '{{ appointment.appointment_id }}')">
+                                            <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); event.preventDefault(); cancelAppointment('{{ appointment._id }}', '{{ appointment.appointment_id }}')">
                                                 <i class="fas fa-times me-1"></i>Cancel
                                             </button>
                                         </div>
@@ -412,66 +412,17 @@
                 .then(data => {
                     if (data.success) {
                         // Show success message
-                        const toastHtml = `
-                            <div class="toast show" role="alert">
-                                <div class="toast-header">
-                                    <i class="fas fa-check-circle text-success me-2"></i>
-                                    <strong class="me-auto">Success</strong>
-                                    <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
-                                </div>
-                                <div class="toast-body">
-                                    Appointment #${appointmentDisplayId} has been cancelled successfully.
-                                </div>
-                            </div>
-                        `;
-                        
-                        // Add toast to container
-                        const toastContainer = document.querySelector('.toast-container');
-                        toastContainer.insertAdjacentHTML('beforeend', toastHtml);
-                        
-                        // Refresh page after 2 seconds
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 2000);
+                        alert(`Appointment #${appointmentDisplayId} has been cancelled successfully.`);
+                        // Refresh page immediately
+                        window.location.reload();
                     } else {
                         // Show error message
-                        const toastHtml = `
-                            <div class="toast show" role="alert">
-                                <div class="toast-header">
-                                    <i class="fas fa-exclamation-circle text-danger me-2"></i>
-                                    <strong class="me-auto">Error</strong>
-                                    <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
-                                </div>
-                                <div class="toast-body">
-                                    ${data.message || 'Failed to cancel appointment. Please try again.'}
-                                </div>
-                            </div>
-                        `;
-                        
-                        // Add toast to container
-                        const toastContainer = document.querySelector('.toast-container');
-                        toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+                        alert(`Error: ${data.message || 'Failed to cancel appointment. Please try again.'}`);
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    // Show error message
-                    const toastHtml = `
-                        <div class="toast show" role="alert">
-                            <div class="toast-header">
-                                <i class="fas fa-exclamation-circle text-danger me-2"></i>
-                                <strong class="me-auto">Error</strong>
-                                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
-                            </div>
-                            <div class="toast-body">
-                                Failed to cancel appointment. Please try again.
-                            </div>
-                        </div>
-                    `;
-                    
-                    // Add toast to container
-                    const toastContainer = document.querySelector('.toast-container');
-                    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+                    alert('Failed to cancel appointment. Please try again.');
                 });
             }
         }

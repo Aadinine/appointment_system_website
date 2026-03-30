@@ -581,6 +581,12 @@ def confirm_booking():
             result = atlas_db["appointments"].insert_one(appointment_data)
             appointment_id = str(result.inserted_id)[-6:].upper()  # Last 6 digits, all caps
             
+            # Add appointment_id to the database record
+            atlas_db["appointments"].update_one(
+                {"_id": result.inserted_id},
+                {"$set": {"appointment_id": appointment_id}}
+            )
+            
             flash('Appointment booked successfully!', 'success')
             return render_template('confirmation.html', 
                                 appointment=appointment_data, 
