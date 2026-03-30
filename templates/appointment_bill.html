@@ -3,24 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Appointment Confirmed - #{{ appointment.appointment_id }}</title>
+    <title>Appointment Information - #{{ appointment.appointment_id }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <div class="confirmation-container">
-        <div class="success-message">
-            <h1>✅ Appointment Confirmed!</h1>
-            <p class="subtitle">Your appointment has been successfully booked</p>
+        <div class="bill-header">
+            <h1>📋 Appointment Information</h1>
+            <div class="appointment-id">
+                <strong>Appointment ID:</strong> #{{ appointment.appointment_id }}
+            </div>
         </div>
         
         <div class="appointment-details">
-            <div class="bill-header">
-                <h2>📋 Appointment Receipt</h2>
-                <div class="appointment-id">
-                    <strong>Appointment ID:</strong> #{{ appointment_id }}
-                </div>
-            </div>
-            
             <div class="detail-section">
                 <h3>Patient Information</h3>
                 <div class="info-grid">
@@ -61,7 +56,7 @@
                         <strong>Time:</strong> {{ appointment.time_slot }}
                     </div>
                     <div class="info-item">
-                        <strong>Appointment ID:</strong> #{{ appointment_id }}
+                        <strong>Appointment ID:</strong> #{{ appointment.appointment_id }}
                     </div>
                 </div>
             </div>
@@ -74,20 +69,10 @@
             {% endif %}
         </div>
         
-        <div class="next-steps">
-            <h3>📝 What's Next?</h3>
-            <ul>
-                <li>You'll receive a confirmation email at {{ appointment.patient_email }}</li>
-                <li>Please arrive 15 minutes before your appointment time</li>
-                <li>Bring any relevant medical records or test reports</li>
-                <li>Call the hospital if you need to reschedule</li>
-            </ul>
-        </div>
-        
         <div class="actions">
-            <button class="btn" onclick="window.print()">🖨️ Print Receipt</button>
+            <button class="btn" onclick="window.print()">🖨️ Print Bill</button>
             <button class="btn" onclick="addToCalendar()">📅 Add to Calendar</button>
-            <a href="/dashboard" class="btn">📋 View My Appointments</a>
+            <a href="/dashboard" class="btn">📋 Back to Dashboard</a>
         </div>
     </div>
     

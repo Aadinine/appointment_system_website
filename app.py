@@ -9,6 +9,26 @@ import hashlib
 import secrets
 import json
 from dotenv import load_dotenv
+from bson.objectid import ObjectId
+
+def calculate_distance(lat1, lng1, lat2, lng2):
+    """Calculate distance between two coordinates in kilometers"""
+    from math import radians, sin, cos, sqrt, atan2
+    
+    # Convert latitude and longitude from degrees to radians
+    lat1, lng1, lat2, lng2 = map(radians, [lat1, lng1, lat2, lng2])
+    
+    # Haversine formula
+    dlat = lat2 - lat1
+    dlng = lng2 - lng1
+    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlng/2)**2
+    c = 2 * atan2(sqrt(a), sqrt(1-a))
+    
+    # Earth's radius in kilometers
+    R = 6371
+    distance = R * c
+    
+    return round(distance, 1)
 
 load_dotenv()
 
@@ -179,6 +199,11 @@ def get_user_appointments(user_id):
         # Convert ObjectId to string for JSON serialization
         for appointment in appointments:
             appointment["_id"] = str(appointment["_id"])
+            # Generate appointment ID for display
+            appointment["appointment_id"] = str(appointment["_id"])[-6:].upper()
+            # Keep original date for parsing, add formatted date for display
+            original_date = appointment['appointment_date']
+            appointment["formatted_date"] = datetime.strptime(appointment['appointment_date'], '%Y-%m-%d').strftime('%B %d, %Y')
         return appointments
     except Exception as e:
         print(f"❌ Error getting user appointments: {e}")
@@ -450,6 +475,15 @@ def book():
             else:
                 print(f"✅ Found {len(nearby_doctors)} doctors matching {recommended_specialty}")
             
+            # Calculate distances for all doctors
+            user_lat = 28.6139  # Delhi coordinates
+            user_lng = 77.2090
+            for doctor in nearby_doctors:
+                if "location" in doctor and "lat" in doctor["location"] and "lng" in doctor["location"]:
+                    doctor["distance"] = calculate_distance(user_lat, user_lng, doctor["location"]["lat"], doctor["location"]["lng"])
+                else:
+                    doctor["distance"] = 0
+            
             return render_template('result.html', name=name, symptoms=symptoms, ai=ai_result, 
                                  ai_data=ai_data, nearby_doctors=nearby_doctors, user_location={"lat": 28.6139, "lng": 77.2090})
         except Exception as e:
@@ -516,8 +550,12 @@ def confirm_booking():
             }
             
             result = atlas_db["appointments"].insert_one(appointment_data)
+            appointment_id = str(result.inserted_id)[-6:].upper()  # Last 6 digits, all caps
+            
             flash('Appointment booked successfully!', 'success')
-            return redirect(url_for('dashboard'))
+            return render_template('confirmation.html', 
+                                appointment=appointment_data, 
+                                appointment_id=appointment_id)
         else:
             flash('Database connection error', 'error')
             return redirect(url_for('book'))
@@ -532,22 +570,125 @@ def confirm_booking():
 def get_time_slots(doctor_id, date):
     """API endpoint to get available time slots for a doctor on a specific date"""
     try:
-        # Generate time slots (9 AM to 5 PM, hourly)
-        time_slots = []
-        for hour in range(9, 18):  # 9 AM to 5 PM
-            time_str = f"{hour:02d}:00"
-            # Randomly mark some slots as unavailable for demo
-            status = 'available' if hour % 3 != 0 else 'booked'
-            time_slots.append({
-                "time": time_str,
-                "available": status == 'available',
-                "status": status
-            })
+        # Validate date format
+        if not date:
+            return jsonify({"error": "Date is required"}), 400
         
-        return jsonify(time_slots)
+        # Get current time
+        now = datetime.now()
+        selected_date = datetime.strptime(date, '%Y-%m-%d')
+        
+        # Don't allow booking for past dates
+        if selected_date.date() < now.date():
+            return jsonify({"error": "Cannot book appointments in the past"}), 400
+        
+        # Get existing appointments for this doctor and date
+        atlas_db = get_atlas_connection()
+        booked_slots = []
+        if atlas_db is not None:
+            try:
+                appointments = list(atlas_db["appointments"].find({
+                    "doctor_id": doctor_id,
+                    "appointment_date": date
+                }))
+                booked_slots = [apt["time_slot"] for apt in appointments]
+            except:
+                booked_slots = []
+        
+        # Generate time slots (9 AM to 9 PM, half-hour intervals)
+        time_slots = []
+        for hour in range(9, 22):  # 9 AM to 9 PM (last slot 20:30)
+            for minute in [0, 30]:  # :00 and :30
+                time_str = f"{hour:02d}:{minute:02d}"
+                
+                # Skip lunch break slots entirely (12:00-14:00)
+                if hour == 12 or (hour == 13):
+                    continue
+                
+                # Create datetime for this slot
+                slot_datetime = datetime.strptime(f"{date} {time_str}", '%Y-%m-%d %H:%M')
+                
+                # Check if this slot is in the past (today)
+                is_past = slot_datetime < now
+                
+                # Check if this slot is before current time on same day
+                is_before_current_time = False
+                if selected_date.date() == now.date() and slot_datetime <= now:
+                    is_before_current_time = True
+                
+                # Check if this slot is already booked
+                is_booked = time_str in booked_slots
+                
+                # Additional check: prevent double booking by checking if slot was recently booked by someone else
+                is_double_booking = False
+                if is_booked:
+                    # Check if this slot was booked in the last 5 minutes (to prevent race conditions)
+                    recent_appointments = list(atlas_db["appointments"].find({
+                        "doctor_id": doctor_id,
+                        "appointment_date": date,
+                        "time_slot": time_str,
+                        "created_at": {"$gte": (datetime.now() - timedelta(minutes=5)).isoformat()}
+                    }))
+                    if recent_appointments:
+                        is_double_booking = True
+                
+                # Determine status
+                if is_past:
+                    status = 'past'
+                elif is_before_current_time:
+                    status = 'unavailable'
+                elif is_booked or is_double_booking:
+                    status = 'booked'
+                else:
+                    status = 'available'
+                
+                time_slots.append({
+                    "time": time_str,
+                    "available": status == 'available',
+                    "status": status
+                })
+        
+        return jsonify({"time_slots": time_slots})
     except Exception as e:
         print(f"❌ Time slots error: {e}")
-        return jsonify([])
+        return jsonify({"error": "Failed to load time slots", "details": str(e)}), 500
+
+@app.route('/appointment_bill/<appointment_id>')
+@login_required
+def appointment_bill(appointment_id):
+    """Show appointment bill/receipt"""
+    user = session['user']
+    
+    try:
+        # Get appointment from database
+        atlas_db = get_atlas_connection()
+        if atlas_db is None:
+            flash('Database connection error', 'error')
+            return redirect(url_for('dashboard'))
+        
+        appointment = atlas_db["appointments"].find_one({"_id": ObjectId(appointment_id)})
+        
+        if not appointment or appointment["patient_email"] != user['email']:
+            flash('Appointment not found', 'error')
+            return redirect(url_for('dashboard'))
+        
+        # Get doctor specialty from doctor data
+        doctors = load_doctor_data()
+        doctor = next((doc for doc in doctors["specialists"] if doc["_id"] == appointment["doctor_id"]), None)
+        specialty = doctor["specialty"] if doctor else "Not specified"
+        
+        # Convert ObjectId to string and format
+        appointment["_id"] = str(appointment["_id"])
+        appointment["appointment_id"] = str(appointment["_id"])[-6:].upper()
+        appointment["appointment_date"] = datetime.strptime(appointment['appointment_date'], '%Y-%m-%d').strftime('%B %d, %Y')
+        appointment["specialty"] = specialty
+        
+        return render_template('appointment_bill.html', appointment=appointment)
+        
+    except Exception as e:
+        print(f"❌ Error loading appointment bill: {e}")
+        flash('Error loading appointment details', 'error')
+        return redirect(url_for('dashboard'))
 
 if __name__ == '__main__':
     print("🚀 Starting appointment system...")

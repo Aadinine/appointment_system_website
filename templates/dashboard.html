@@ -46,6 +46,15 @@
             border-left-color: #6c757d;
             opacity: 0.7;
         }
+        
+        .appointment-card.clickable {
+            cursor: pointer;
+        }
+        
+        .appointment-card.clickable:hover {
+            transform: translateX(5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
         .status-badge {
             padding: 5px 12px;
             border-radius: 20px;
@@ -69,6 +78,19 @@
         .btn-action:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .quick-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .quick-actions .btn {
+            margin: 0;
+            padding: 12px 24px;
         }
         .empty-state {
             text-align: center;
@@ -200,7 +222,7 @@
                     <div class="tab-pane fade show active" id="upcoming" role="tabpanel">
                         {% if upcoming_appointments %}
                             {% for appointment in upcoming_appointments %}
-                            <div class="appointment-card">
+                            <div class="appointment-card clickable" onclick="showAppointmentBill('{{ appointment._id }}')">
                                 <div class="row align-items-center">
                                     <div class="col-md-8">
                                         <h6 class="mb-2">
@@ -210,10 +232,7 @@
                                             <i class="fas fa-hospital me-2"></i>{{ appointment.hospital }}
                                         </p>
                                         <p class="mb-1">
-                                            <i class="fas fa-stethoscope me-2"></i>{{ appointment.specialty }}
-                                        </p>
-                                        <p class="mb-1">
-                                            <i class="fas fa-calendar me-2"></i>{{ appointment.appointment_date }} at {{ appointment.time_slot }}
+                                            <i class="fas fa-calendar me-2"></i>{{ appointment.formatted_date }} at {{ appointment.time_slot }}
                                         </p>
                                         {% if appointment.symptoms %}
                                         <p class="mb-0 text-muted">
@@ -259,7 +278,7 @@
                                             <i class="fas fa-stethoscope me-2"></i>{{ appointment.specialty }}
                                         </p>
                                         <p class="mb-1">
-                                            <i class="fas fa-calendar me-2"></i>{{ appointment.appointment_date }} at {{ appointment.time_slot }}
+                                            <i class="fas fa-calendar me-2"></i>{{ appointment.formatted_date }} at {{ appointment.time_slot }}
                                         </p>
                                         {% if appointment.symptoms %}
                                         <p class="mb-0 text-muted">
@@ -289,14 +308,16 @@
         </div>
 
         <!-- Quick Actions -->
-        <div class="text-center mt-4">
-            <a href="{{ url_for('specialists') }}" class="btn btn-outline-primary btn-action me-2">
+        <div class="quick-actions">
+            <a href="{{ url_for('specialists') }}" class="btn btn-outline-primary">
                 <i class="fas fa-th-list me-2"></i>Browse Specialists
             </a>
-            <a href="{{ url_for('home') }}" class="btn btn-outline-secondary btn-action">
+            <a href="{{ url_for('home') }}" class="btn btn-outline-secondary">
                 <i class="fas fa-home me-2"></i>Back to Home
             </a>
         </div>
+        
+        <div style="height: 60px;"></div>
     </div>
 
     <!-- Flash Messages -->
@@ -328,6 +349,12 @@
                 toast.classList.remove('show');
             });
         }, 5000);
+        
+        // Show appointment bill function
+        function showAppointmentBill(appointmentId) {
+            // Redirect to appointment bill page
+            window.location.href = `/appointment_bill/${appointmentId}`;
+        }
     </script>
 </body>
 </html>

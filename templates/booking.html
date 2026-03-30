@@ -97,6 +97,10 @@
                 const response = await fetch(`/get_time_slots/${doctorId}/${date}`);
                 const data = await response.json();
                 
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
                 timeSlotsContainer.innerHTML = '';
                 
                 data.time_slots.forEach((slot, index) => {
@@ -104,9 +108,11 @@
                     slotElement.className = 'time-slot';
                     
                     const statusClass = slot.status === 'available' ? 'available' : 
-                                      slot.status === 'booked' ? 'booked' : 'past';
+                                      slot.status === 'booked' ? 'booked' : 
+                                      slot.status === 'unavailable' ? 'unavailable' : 'past';
                     const statusText = slot.status === 'available' ? 'Available' : 
-                                     slot.status === 'booked' ? 'Booked' : 'Past';
+                                     slot.status === 'booked' ? 'Booked' : 
+                                     slot.status === 'unavailable' ? 'Unavailable' : 'Past';
                     
                     slotElement.innerHTML = `
                         <input type="radio" id="slot_${index}" name="time_slot" value="${slot.time}" 
@@ -124,9 +130,9 @@
                 attachTimeSlotListeners();
                 
             } catch (error) {
-                console.error('Error fetching time slots:', error);
+                console.error('Error loading time slots:', error);
                 const timeSlotsContainer = document.querySelector('.time-slots');
-                timeSlotsContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #f44336;">❌ Error loading time slots. Please try again.</div>';
+                timeSlotsContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: red;">❌ Error loading time slots. Please try again.</div>';
             }
         }
         
