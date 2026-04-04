@@ -295,9 +295,6 @@ appointment-system/
   - AI-powered symptom analysis
   - MongoDB Atlas integration
 
-## 📝 License
-
-This project is licensed under the MIT License.
 
 ## 🔗 Repository
 
