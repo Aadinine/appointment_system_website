@@ -288,7 +288,6 @@ def analyze_symptoms(symptoms):
         if os.getenv("GROQ_API_KEY"):
             try:
                 # Save and clear ALL environment variables that might interfere
-                import os
                 original_env = os.environ.copy()
                 
                 # Clear any proxy-related variables completely
