@@ -278,28 +278,28 @@ def analyze_symptoms(symptoms):
     # Try to use actual AI services first
     ai_service_used = "Keyword Analysis"
     
-    # Clear proxy environment variables that might interfere with AI clients
-    proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'ALL_PROXY', 'all_proxy']
-    original_proxies = {}
-    for var in proxy_vars:
-        if var in os.environ:
-            original_proxies[var] = os.environ[var]
-            del os.environ[var]
-    
     # Debug environment variables
     print(f"🔍 Environment Check - Groq: {'✅' if os.getenv('GROQ_API_KEY') else '❌'}")
     print(f"🔍 Environment Check - Gemini: {'✅' if os.getenv('GEMINI_API_KEY') else '❌'}")
     print(f"🔍 Environment Check - OpenAI: {'✅' if os.getenv('OPENAI_API_KEY') else '❌'}")
     
     try:
-        # Check Groq first
+        # Check Groq first with aggressive proxy removal
         if os.getenv("GROQ_API_KEY"):
             try:
-                # Force clean environment for Groq
-                old_env = os.environ.copy()
-                # Remove any proxy-related variables
-                for key in list(os.environ.keys()):
-                    if 'proxy' in key.lower():
+                # Save and clear ALL environment variables that might interfere
+                import os
+                original_env = os.environ.copy()
+                
+                # Clear any proxy-related variables completely
+                proxy_keys = [k for k in os.environ.keys() if 'proxy' in k.lower() or 'PROXY' in k]
+                for key in proxy_keys:
+                    del os.environ[key]
+                
+                # Also clear potential HTTP-related variables
+                http_keys = [k for k in os.environ.keys() if any(x in k.lower() for x in ['http', 'https', 'all', 'no'])]
+                for key in http_keys:
+                    if any(x in key.lower() for x in ['proxy', 'Proxy']):
                         del os.environ[key]
                 
                 from groq import Groq
@@ -324,13 +324,16 @@ Return JSON format: {{"specialty": "specialty_name", "category": "URGENT/ROUTINE
             except Exception as e:
                 print(f"❌ Groq failed: {e}")
                 print(f"🔍 Groq API Key: {os.getenv('GROQ_API_KEY')[:10] if os.getenv('GROQ_API_KEY') else 'None'}")
+                # Restore environment
+                os.environ.clear()
+                os.environ.update(original_env)
         
-        # Check Gemini with updated model
+        # Check Gemini with correct model
         if os.getenv("GEMINI_API_KEY"):
             try:
                 import google.generativeai as genai
                 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-                # Use gemini-1.5-flash instead of gemini-pro
+                # Use gemini-1.5-flash-latest instead of gemini-1.5-flash
                 model = genai.GenerativeModel('gemini-1.5-flash')
                 response = model.generate_content(f"""You are a medical AI assistant. Provide helpful, natural responses in JSON format only. Focus on the most likely specialty based on symptoms.
 
@@ -346,15 +349,38 @@ Return JSON format: {{"specialty": "specialty_name", "category": "URGENT/ROUTINE
             except Exception as e:
                 print(f"❌ Gemini failed: {e}")
                 print(f"🔍 Gemini API Key: {os.getenv('GEMINI_API_KEY')[:10] if os.getenv('GEMINI_API_KEY') else 'None'}")
+                # Try alternative model
+                try:
+                    model = genai.GenerativeModel('gemini-pro')
+                    response = model.generate_content(f"""You are a medical AI assistant. Provide helpful, natural responses in JSON format only. Focus on the most likely specialty based on symptoms.
+
+Analyze these symptoms: "{symptoms}"
+
+Available specialties: Cardiologist, Dermatologist, Neurologist, Orthopedic, Pulmonologist, General Physician, Gastroenterologist, Ophthalmologist, ENT Specialist, Gynecologist, Pediatrician, Psychiatrist
+
+Return JSON format: {{"specialty": "specialty_name", "category": "URGENT/ROUTINE/NORMAL", "reason": "detailed explanation", "timeline": "specific timeframe"}}""")
+                    result = response.text.strip()
+                    print(f"🤖 [Gemini Pro responded]: {result}")
+                    ai_service_used = "Google Gemini Pro"
+                    return result
+                except Exception as e2:
+                    print(f"❌ Gemini Pro also failed: {e2}")
         
-        # Check OpenAI
+        # Check OpenAI with aggressive proxy removal
         if os.getenv("OPENAI_API_KEY"):
             try:
-                # Force clean environment for OpenAI
-                old_env = os.environ.copy()
-                # Remove any proxy-related variables
-                for key in list(os.environ.keys()):
-                    if 'proxy' in key.lower():
+                # Save and clear ALL environment variables that might interfere
+                original_env = os.environ.copy()
+                
+                # Clear any proxy-related variables completely
+                proxy_keys = [k for k in os.environ.keys() if 'proxy' in k.lower() or 'PROXY' in k]
+                for key in proxy_keys:
+                    del os.environ[key]
+                
+                # Also clear potential HTTP-related variables
+                http_keys = [k for k in os.environ.keys() if any(x in k.lower() for x in ['http', 'https', 'all', 'no'])]
+                for key in http_keys:
+                    if any(x in key.lower() for x in ['proxy', 'Proxy']):
                         del os.environ[key]
                 
                 import openai
@@ -379,11 +405,12 @@ Return JSON format: {{"specialty": "specialty_name", "category": "URGENT/ROUTINE
             except Exception as e:
                 print(f"❌ OpenAI failed: {e}")
                 print(f"🔍 OpenAI API Key: {os.getenv('OPENAI_API_KEY')[:10] if os.getenv('OPENAI_API_KEY') else 'None'}")
+                # Restore environment
+                os.environ.clear()
+                os.environ.update(original_env)
     
-    finally:
-        # Restore original proxy environment variables
-        for var, value in original_proxies.items():
-            os.environ[var] = value
+    except Exception as e:
+        print(f"❌ AI service initialization failed: {e}")
     
     print(f"🔍 All AI services failed, using keyword analysis. Service used: {ai_service_used}")
     print(f"🔍 Environment variables loaded: Groq={bool(os.getenv('GROQ_API_KEY'))}, Gemini={bool(os.getenv('GEMINI_API_KEY'))}, OpenAI={bool(os.getenv('OPENAI_API_KEY'))}")
