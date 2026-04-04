@@ -3,13 +3,20 @@ from flask_session import Session
 from pymongo import MongoClient
 import pymongo
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import uuid
 import hashlib
 import secrets
 import json
 from dotenv import load_dotenv
 from bson.objectid import ObjectId
+
+def get_local_time():
+    """Get current time in IST (Indian Standard Time)"""
+    # Get current UTC time and convert to IST (UTC+5:30)
+    utc_now = datetime.now(timezone.utc)
+    ist_now = utc_now + timedelta(hours=5, minutes=30)
+    return ist_now
 
 def calculate_distance(lat1, lng1, lat2, lng2):
     """Calculate distance between two coordinates in kilometers"""
@@ -528,7 +535,7 @@ def dashboard():
     for appointment in appointments:
         appointment_date = datetime.strptime(appointment['appointment_date'], '%Y-%m-%d').date()
         appointment_time = datetime.strptime(appointment['time_slot'], '%H:%M').time()
-        current_datetime = datetime.now()
+        current_datetime = get_local_time()
         current_time = current_datetime.time()
         current_date = current_datetime.date()
         
@@ -537,7 +544,8 @@ def dashboard():
         print(f"  Appointment Date: {appointment_date}")
         print(f"  Appointment Time: {appointment_time}")
         print(f"  Current Date: {current_date}")
-        print(f"  Current Time: {current_time}")
+        print(f"  Current Time (IST): {current_time}")
+        print(f"  Current Time (UTC): {datetime.now(timezone.utc).time()}")
         print(f"  Appointment Status: {appointment.get('status')}")
         
         # Check if appointment is today and time has passed
@@ -705,7 +713,7 @@ def get_time_slots(doctor_id, date):
             return jsonify({"error": "Date is required"}), 400
         
         # Get current time
-        now = datetime.now()
+        now = get_local_time()
         selected_date = datetime.strptime(date, '%Y-%m-%d')
         
         # Don't allow booking for past dates
@@ -805,13 +813,13 @@ def cancel_appointment(appointment_id):
         
         # Check if appointment is in the future (can only cancel upcoming appointments)
         appointment_datetime = datetime.strptime(f"{appointment['appointment_date']} {appointment['time_slot']}", '%Y-%m-%d %H:%M')
-        if appointment_datetime <= datetime.now():
+        if appointment_datetime <= get_local_time():
             return jsonify({"success": False, "message": "Cannot cancel past appointments"})
         
         # Update appointment status to cancelled
         result = atlas_db["appointments"].update_one(
             {"_id": ObjectId(appointment_id)},
-            {"$set": {"status": "cancelled", "cancelled_at": datetime.now()}}
+            {"$set": {"status": "cancelled", "cancelled_at": get_local_time()}}
         )
         
         if result.modified_count > 0:
