@@ -232,43 +232,36 @@ def login_required(f):
 # AI Client Status
 def check_ai_status():
     """Check which AI services are available"""
-    status = {}
+    ai_status = {}
     
     # Check Groq
     try:
         if os.getenv("GROQ_API_KEY"):
-            from groq import Groq
-            client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-            status["Groq"] = "✅ Available"
+            ai_status["Groq"] = "✅ Available"
         else:
-            status["Groq"] = "❌ No API Key"
-    except Exception as e:
-        status["Groq"] = f"❌ Error: {str(e)}"
+            ai_status["Groq"] = "❌ No API key"
+    except:
+        ai_status["Groq"] = "❌ Error"
     
     # Check Gemini
     try:
         if os.getenv("GEMINI_API_KEY"):
-            import google.generativeai as genai
-            genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-            model = genai.GenerativeModel('gemini-pro')
-            status["Gemini"] = "✅ Available"
+            ai_status["Gemini"] = "✅ Available"
         else:
-            status["Gemini"] = "❌ No API Key"
-    except Exception as e:
-        status["Gemini"] = f"❌ Error: {str(e)}"
+            ai_status["Gemini"] = "❌ No API key"
+    except:
+        ai_status["Gemini"] = "❌ Error"
     
     # Check OpenAI
     try:
         if os.getenv("OPENAI_API_KEY"):
-            import openai
-            client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-            status["OpenAI"] = "✅ Available"
+            ai_status["OpenAI"] = "✅ Available"
         else:
-            status["OpenAI"] = "❌ No API Key"
-    except Exception as e:
-        status["OpenAI"] = f"❌ Error: {str(e)}"
+            ai_status["OpenAI"] = "❌ No API key"
+    except:
+        ai_status["OpenAI"] = "❌ Error"
     
-    return status
+    return ai_status
 
 # Simple symptom analysis with AI service tracking
 def analyze_symptoms(symptoms):
@@ -278,9 +271,9 @@ def analyze_symptoms(symptoms):
     # Try to use actual AI services first
     ai_service_used = "Keyword Analysis"
     
-    # Try Groq first
-    try:
-        if os.getenv("GROQ_API_KEY"):
+    # Check Groq first
+    if os.getenv("GROQ_API_KEY"):
+        try:
             from groq import Groq
             client = Groq(api_key=os.getenv("GROQ_API_KEY"))
             response = client.chat.completions.create(
@@ -293,88 +286,65 @@ Available specialties: Cardiologist, Dermatologist, Neurologist, Orthopedic, Pul
 
 Return JSON format: {{"specialty": "specialty_name", "category": "URGENT/ROUTINE/NORMAL", "reason": "detailed explanation", "timeline": "specific timeframe"}}"""}
                 ],
-                temperature=0.3
+                temperature=0.3,
+                max_tokens=150
             )
-            ai_service_used = "Groq"
-            result = response.choices[0].message.content
-        else:
-            raise Exception("No API key")
-    except Exception as e:
-        print(f"❌ Groq failed: {e}")
-        
-        # Try Gemini
+            result = response.choices[0].message.content.strip()
+            print(f"🤖 [Groq responded]: {result}")
+            return result
+        except Exception as e:
+            print(f"❌ Groq failed: {e}")
+    
+    # Check Gemini
+    if os.getenv("GEMINI_API_KEY"):
         try:
-            if os.getenv("GEMINI_API_KEY"):
-                import google.generativeai as genai
-                genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-                model = genai.GenerativeModel('gemini-pro')
-                response = model.generate_content(
-                    f"""Analyze these symptoms: "{symptoms}"
+            import google.generativeai as genai
+            genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+            model = genai.GenerativeModel('gemini-pro')
+            response = model.generate_content(f"""You are a medical AI assistant. Provide helpful, natural responses in JSON format only. Focus on the most likely specialty based on symptoms.
+
+Analyze these symptoms: "{symptoms}"
 
 Available specialties: Cardiologist, Dermatologist, Neurologist, Orthopedic, Pulmonologist, General Physician, Gastroenterologist, Ophthalmologist, ENT Specialist, Gynecologist, Pediatrician, Psychiatrist
 
-Return JSON format: {{"specialty": "specialty_name", "category": "URGENT/ROUTINE/NORMAL", "reason": "detailed explanation", "timeline": "specific timeframe"}}"""
-                )
-                ai_service_used = "Gemini"
-                result = response.text
-            else:
-                raise Exception("No API key")
+Return JSON format: {{"specialty": "specialty_name", "category": "URGENT/ROUTINE/NORMAL", "reason": "detailed explanation", "timeline": "specific timeframe"}}""")
+            result = response.text.strip()
+            print(f"🤖 [Gemini responded]: {result}")
+            return result
         except Exception as e:
             print(f"❌ Gemini failed: {e}")
-            
-            # Try OpenAI
-            try:
-                if os.getenv("OPENAI_API_KEY"):
-                    import openai
-                    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-                    response = client.chat.completions.create(
-                        model="gpt-3.5-turbo",
-                        messages=[
-                            {"role": "system", "content": "You are a medical AI assistant. Provide helpful, natural responses in JSON format only. Focus on the most likely specialty based on symptoms."},
-                            {"role": "user", "content": f"""Analyze these symptoms: "{symptoms}"
+    
+    # Check OpenAI
+    if os.getenv("OPENAI_API_KEY"):
+        try:
+            import openai
+            client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a medical AI assistant. Provide helpful, natural responses in JSON format only. Focus on the most likely specialty based on symptoms."},
+                    {"role": "user", "content": f"""Analyze these symptoms: "{symptoms}"
 
 Available specialties: Cardiologist, Dermatologist, Neurologist, Orthopedic, Pulmonologist, General Physician, Gastroenterologist, Ophthalmologist, ENT Specialist, Gynecologist, Pediatrician, Psychiatrist
 
 Return JSON format: {{"specialty": "specialty_name", "category": "URGENT/ROUTINE/NORMAL", "reason": "detailed explanation", "timeline": "specific timeframe"}}"""}
-                        ],
-                        temperature=0.3
-                    )
-                    ai_service_used = "OpenAI"
-                    result = response.choices[0].message.content
-                else:
-                    raise Exception("No API key")
-            except Exception as e:
-                print(f"❌ OpenAI failed: {e}")
+                ],
+                temperature=0.3,
+            )
+            result = response.choices[0].message.content.strip()
+            print(f"🤖 [OpenAI responded]: {result}")
+            return result
+        except Exception as e:
+            print(f"❌ OpenAI failed: {e}")
     
-    # Fallback to keyword analysis if all AI services fail
-    if ai_service_used == "Keyword Analysis":
-        print("🤖 [Keyword Analysis]: Using fallback keyword analysis")
-        if any(word in symptoms_lower for word in ['chest', 'heart', 'breathing']):
-            result = '{"specialty": "Cardiologist", "category": "URGENT", "reason": "Chest pain and breathing difficulties may indicate serious heart or lung conditions requiring immediate medical attention", "timeline": "Within 24 hours"}'
-        elif any(word in symptoms_lower for word in ['skin', 'rash', 'acne']):
-            result = '{"specialty": "Dermatologist", "category": "NORMAL", "reason": "Skin issues like rashes and acne can be effectively treated by a dermatology specialist", "timeline": "Within 1-2 weeks"}'
-        elif any(word in symptoms_lower for word in ['brain', 'head', 'migraine', 'seizure']):
-            result = '{"specialty": "Neurologist", "category": "URGENT", "reason": "Headaches, migraines and seizures require neurological evaluation to rule out serious conditions", "timeline": "Within 24 hours"}'
-        elif any(word in symptoms_lower for word in ['bone', 'joint', 'back', 'fracture']):
-            result = '{"specialty": "Orthopedic", "category": "ROUTINE", "reason": "Bone, joint and back problems need orthopedic specialist evaluation for proper treatment", "timeline": "Within 3-7 days"}'
-        elif any(word in symptoms_lower for word in ['lung', 'breathing', 'asthma', 'cough']):
-            result = '{"specialty": "Pulmonologist", "category": "ROUTINE", "reason": "Respiratory symptoms including cough and asthma need lung specialist evaluation", "timeline": "Within 3-7 days"}'
-        elif any(word in symptoms_lower for word in ['fever', 'cold', 'flu']):
-            result = '{"specialty": "General Physician", "category": "ROUTINE", "reason": "Fever and cold symptoms can be managed by primary care physician", "timeline": "Within 3-7 days"}'
-        elif any(word in symptoms_lower for word in ['stomach', 'digestive', 'acid', 'liver']):
-            result = '{"specialty": "Gastroenterologist", "category": "ROUTINE", "reason": "Stomach and digestive issues require gastroenterology specialist for proper diagnosis", "timeline": "Within 3-7 days"}'
-        elif any(word in symptoms_lower for word in ['eye', 'vision', 'cataract', 'glaucoma']):
-            result = '{"specialty": "Ophthalmologist", "category": "ROUTINE", "reason": "Eye problems and vision changes need ophthalmology specialist evaluation", "timeline": "Within 1-2 weeks"}'
-        elif any(word in symptoms_lower for word in ['ear', 'nose', 'throat', 'sinus']):
-            result = '{"specialty": "ENT Specialist", "category": "ROUTINE", "reason": "Ear, nose and throat problems need ENT specialist for comprehensive care", "timeline": "Within 3-7 days"}'
-        elif any(word in symptoms_lower for word in ['pregnancy', 'menstrual', 'women', 'fertility']):
-            result = '{"specialty": "Gynecologist", "category": "ROUTINE", "reason": "Women\'s health issues including pregnancy and menstrual problems need gynecology care", "timeline": "Within 1-2 weeks"}'
-        elif any(word in symptoms_lower for word in ['child', 'pediatric', 'baby', 'vaccine']):
-            result = '{"specialty": "Pediatrician", "category": "ROUTINE", "reason": "Child health issues and vaccinations need pediatric specialist for age-appropriate care", "timeline": "Within 3-7 days"}'
-        elif any(word in symptoms_lower for word in ['mental', 'depression', 'anxiety', 'stress']):
-            result = '{"specialty": "Psychiatrist", "category": "URGENT", "reason": "Mental health concerns including depression and anxiety need immediate psychiatric evaluation", "timeline": "Within 24 hours"}'
-        else:
-            result = '{"specialty": "General Physician", "category": "ROUTINE", "reason": "General symptoms can be evaluated and treated by primary care physician", "timeline": "Within 3-7 days"}'
+    # Keyword fallback with better explanations
+    if any(word in symptoms_lower for word in ['chest', 'heart', 'breathing']):
+        result = '{"specialty": "Cardiologist", "category": "URGENT", "reason": "Chest pain and breathing difficulties may indicate serious heart or lung conditions requiring immediate medical attention", "timeline": "Within 24 hours"}'
+    elif any(word in symptoms_lower for word in ['skin', 'rash', 'acne']):
+        result = '{"specialty": "Dermatologist", "category": "NORMAL", "reason": "Skin issues like rashes and acne can be effectively treated by a dermatology specialist", "timeline": "Within 1-2 weeks"}'
+    elif any(word in symptoms_lower for word in ['brain', 'head', 'migraine', 'seizure']):
+        result = '{"specialty": "Neurologist", "category": "URGENT", "reason": "Headaches, migraines and seizures require neurological evaluation to rule out serious conditions", "timeline": "Within 24 hours"}'
+    elif any(word in symptoms_lower for word in ['bone', 'joint', 'back', 'fracture']):
         result = '{"specialty": "Orthopedic", "category": "ROUTINE", "reason": "Bone, joint and back problems need orthopedic specialist evaluation for proper treatment", "timeline": "Within 3-7 days"}'
     elif any(word in symptoms_lower for word in ['lung', 'breathing', 'asthma', 'cough']):
         result = '{"specialty": "Pulmonologist", "category": "ROUTINE", "reason": "Respiratory symptoms including cough and asthma need lung specialist evaluation", "timeline": "Within 3-7 days"}'
