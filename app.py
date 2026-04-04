@@ -435,6 +435,15 @@ def logout():
     flash('You have been logged out successfully', 'info')
     return redirect(url_for('home'))
 
+@app.route('/health')
+def health_check():
+    """Health check endpoint for Railway deployment"""
+    return jsonify({
+        "status": "healthy",
+        "service": "appointment-system",
+        "timestamp": datetime.now().isoformat()
+    })
+
 @app.route('/dashboard')
 @login_required
 def dashboard():
@@ -780,11 +789,9 @@ def appointment_bill(appointment_id):
 if __name__ == '__main__':
     print("🚀 Starting appointment system...")
     
-    # Test Atlas connection
+    # Check Atlas connection
     atlas_db = get_atlas_connection()
-    if atlas_db is not None:
-        print("✅ Atlas database connected")
-    else:
+    if atlas_db is None:
         print("❌ Atlas database connection failed")
     
     # Load doctor data
@@ -798,4 +805,4 @@ if __name__ == '__main__':
         print(f"  {service}: {status}")
     
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='127.0.0.1', port=port, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=False)
