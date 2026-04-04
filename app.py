@@ -289,7 +289,6 @@ def analyze_symptoms(symptoms):
         if os.getenv("GROQ_API_KEY"):
             try:
                 # Force clean environment for Groq
-                import os
                 old_env = os.environ.copy()
                 # Remove any proxy-related variables
                 for key in list(os.environ.keys()):
@@ -345,7 +344,6 @@ Return JSON format: {{"specialty": "specialty_name", "category": "URGENT/ROUTINE
         if os.getenv("OPENAI_API_KEY"):
             try:
                 # Force clean environment for OpenAI
-                import os
                 old_env = os.environ.copy()
                 # Remove any proxy-related variables
                 for key in list(os.environ.keys()):
