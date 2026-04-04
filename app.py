@@ -45,39 +45,13 @@ Session(app)
 
 # MongoDB Atlas connection
 def get_atlas_connection():
-    """Get MongoDB Atlas connection with robust error handling"""
     try:
-        # Check if environment variable exists
-        connection_string = os.getenv("ATLAS_CONNECTION_STRING")
-        if not connection_string:
-            print("❌ ATLAS_CONNECTION_STRING not found in environment")
-            return None
-        
-        # Add connection timeout and retry logic
-        client = pymongo.MongoClient(
-            connection_string,
-            serverSelectionTimeoutMS=5000,  # 5 second timeout
-            connectTimeoutMS=5000,  # 5 second timeout
-            socketTimeoutMS=5000  # 5 second timeout
-        )
-        
-        # Test the connection
+        client = pymongo.MongoClient(os.getenv("ATLAS_CONNECTION_STRING"))
         db = client["appointment_system"]
-        client.admin.command('ping')  # Test connection
-        
         print("[loaded from atlas]")
         return db
-    except pymongo.errors.ServerSelectionTimeoutError as e:
-        print(f"❌ Atlas connection timeout: {e}")
-        return None
-    except pymongo.errors.ConnectionFailure as e:
-        print(f"❌ Atlas connection failed: {e}")
-        return None
-    except pymongo.errors.OperationFailure as e:
-        print(f"❌ Atlas operation failed: {e}")
-        return None
     except Exception as e:
-        print(f"❌ Atlas connection error: {e}")
+        print(f"❌ Atlas connection failed: {e}")
         return None
 
 # Load doctor data from Atlas or fallback to mock data
@@ -215,10 +189,9 @@ def authenticate_user(email, password):
         return None, "Invalid email or password"
 
 def get_user_appointments(user_id):
-    """Get all appointments for a specific user with fallback"""
+    """Get all appointments for a specific user"""
     atlas_db = get_atlas_connection()
     if atlas_db is None:
-        print("❌ Using fallback - no appointments available")
         return []
     
     try:
@@ -589,38 +562,39 @@ def confirm_booking():
     try:
         # Save appointment to database
         atlas_db = get_atlas_connection()
-        if atlas_db is None:
-            flash('Database connection error. Please try again later.', 'error')
+        if atlas_db is not None:
+            appointment_data = {
+                "patient_email": user['email'],
+                "patient_name": user['name'],
+                "patient_phone": user['phone'],
+                "doctor_id": doctor_id,
+                "doctor_name": doctor_name,
+                "hospital": hospital,
+                "specialty": specialty,
+                "appointment_date": appointment_date,
+                "time_slot": time_slot,
+                "symptoms": symptoms,
+                "status": "confirmed",
+                "created_at": datetime.now()
+            }
+            
+            result = atlas_db["appointments"].insert_one(appointment_data)
+            appointment_id = str(result.inserted_id)[-6:].upper()  # Last 6 digits, all caps
+            
+            # Add appointment_id to the database record
+            atlas_db["appointments"].update_one(
+                {"_id": result.inserted_id},
+                {"$set": {"appointment_id": appointment_id}}
+            )
+            
+            flash('Appointment booked successfully!', 'success')
+            return render_template('confirmation.html', 
+                                appointment=appointment_data, 
+                                appointment_id=appointment_id)
+        else:
+            flash('Database connection error', 'error')
             return redirect(url_for('book'))
-        
-        appointment_data = {
-            "patient_email": user['email'],
-            "patient_name": user['name'],
-            "patient_phone": user['phone'],
-            "doctor_id": doctor_id,
-            "doctor_name": doctor_name,
-            "hospital": hospital,
-            "specialty": specialty,
-            "appointment_date": appointment_date,
-            "time_slot": time_slot,
-            "symptoms": symptoms,
-            "status": "confirmed",
-            "created_at": datetime.now()
-        }
-        
-        result = atlas_db["appointments"].insert_one(appointment_data)
-        appointment_id = str(result.inserted_id)[-6:].upper()  # Last 6 digits, all caps
-        
-        # Add appointment_id to the database record
-        atlas_db["appointments"].update_one(
-            {"_id": result.inserted_id},
-            {"$set": {"appointment_id": appointment_id}}
-        )
-        
-        flash('Appointment booked successfully!', 'success')
-        return render_template('confirmation.html', 
-                            appointment=appointment_data, 
-                            appointment_id=appointment_id)
+            
     except Exception as e:
         print(f"❌ Booking error: {e}")
         flash('Booking failed. Please try again.', 'error')
@@ -654,11 +628,8 @@ def get_time_slots(doctor_id, date):
                     "status": {"$ne": "cancelled"}  # Exclude cancelled appointments
                 }))
                 booked_slots = [apt["time_slot"] for apt in appointments]
-            except Exception as e:
-                print(f"❌ Error getting booked slots: {e}")
-                # Continue with empty booked slots if database fails
-        else:
-            print("❌ Atlas connection failed for time slots, using empty schedule")
+            except:
+                booked_slots = []
         
         # Generate time slots (9 AM to 9 PM, half-hour intervals)
         time_slots = []
@@ -730,12 +701,12 @@ def cancel_appointment(appointment_id):
         # Get appointment from database
         atlas_db = get_atlas_connection()
         if atlas_db is None:
-            return jsonify({"success": False, "message": "Database connection error. Please try again later."})
+            return jsonify({"success": False, "message": "Database connection error"})
         
         appointment = atlas_db["appointments"].find_one({"_id": ObjectId(appointment_id)})
         
         if not appointment or appointment["patient_email"] != user['email']:
-            return jsonify({"success": False, "message": "Appointment not found or access denied"})
+            return jsonify({"success": False, "message": "Appointment not found"})
         
         # Check if appointment is in the future (can only cancel upcoming appointments)
         appointment_datetime = datetime.strptime(f"{appointment['appointment_date']} {appointment['time_slot']}", '%Y-%m-%d %H:%M')
