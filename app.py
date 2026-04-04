@@ -496,23 +496,42 @@ def dashboard():
     for appointment in appointments:
         appointment_date = datetime.strptime(appointment['appointment_date'], '%Y-%m-%d').date()
         appointment_time = datetime.strptime(appointment['time_slot'], '%H:%M').time()
-        current_time = datetime.now().time()
+        current_datetime = datetime.now()
+        current_time = current_datetime.time()
+        current_date = current_datetime.date()
+        
+        # Debug logging
+        print(f"🔍 Appointment Debug:")
+        print(f"  Appointment Date: {appointment_date}")
+        print(f"  Appointment Time: {appointment_time}")
+        print(f"  Current Date: {current_date}")
+        print(f"  Current Time: {current_time}")
+        print(f"  Appointment Status: {appointment.get('status')}")
         
         # Check if appointment is today and time has passed
-        if appointment_date == datetime.now().date():
+        if appointment_date == current_date:
+            print(f"  📅 Appointment is today")
             if appointment_time >= current_time:
+                print(f"  ⏰ Appointment time is in the future")
                 if appointment.get('status') == 'cancelled':
+                    print(f"  ❌ Appointment is cancelled - moving to past")
                     past_appointments.append(appointment)
                 else:
+                    print(f"  ✅ Appointment is upcoming")
                     upcoming_appointments.append(appointment)
             else:
+                print(f"  ⏰ Appointment time has passed - moving to past")
                 past_appointments.append(appointment)
-        elif appointment_date > datetime.now().date():
+        elif appointment_date > current_date:
+            print(f"  📅 Appointment is in the future")
             if appointment.get('status') != 'cancelled':
+                print(f"  ✅ Appointment is upcoming")
                 upcoming_appointments.append(appointment)
             else:
+                print(f"  ❌ Cancelled appointment - moving to past")
                 past_appointments.append(appointment)
         else:
+            print(f"  📅 Appointment is in the past - moving to past")
             past_appointments.append(appointment)
     
     return render_template('dashboard.html', 
