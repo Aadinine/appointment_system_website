@@ -3,212 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Book Appointment - MediBook</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <title>Book an Appointment</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar">
-        <div class="container">
-            <a href="{{ url_for('home') }}" class="navbar-brand">
-                <i class="fas fa-heartbeat"></i>
-                MediBook
-            </a>
-            <ul class="navbar-nav">
-                <li><a href="{{ url_for('home') }}" class="nav-link">Home</a></li>
-                <li><a href="{{ url_for('specialists') }}" class="nav-link">Specialists</a></li>
-                {% if 'user' in session %}
-                    <li><a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a></li>
-                    <li><a href="{{ url_for('logout') }}" class="nav-link">Logout</a></li>
-                {% else %}
-                    <li><a href="{{ url_for('login') }}" class="nav-link">Login</a></li>
-                    <li><a href="{{ url_for('register') }}" class="nav-link">Register</a></li>
-                {% endif %}
-            </ul>
-        </div>
-    </nav>
-
-    <!-- Main Content -->
-    <section class="container py-5">
-        <div class="container-sm">
-            <div class="card fade-in">
-                <div class="card-header text-center">
-                    <h1 class="card-title">
-                        <i class="fas fa-calendar-plus me-3"></i>Book an Appointment
-                    </h1>
-                    <p class="card-subtitle">Get AI-powered doctor recommendations based on your symptoms</p>
-                </div>
-
-                <form method="POST" class="booking-form">
-                    <div class="form-group">
-                        <label for="symptoms" class="form-label">
-                            <i class="fas fa-stethoscope me-2"></i>Describe your symptoms
-                        </label>
-                        <textarea 
-                            id="symptoms" 
-                            name="symptoms" 
-                            class="form-control" 
-                            rows="5" 
-                            placeholder="Please describe your symptoms in detail...&#10;For example: chest pain, headache, fever, cough, fatigue, etc."
-                            required
-                        ></textarea>
-                        <small class="form-text text-muted">
-                            <i class="fas fa-info-circle me-1"></i>
-                            Be as specific as possible for better AI recommendations
-                        </small>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary btn-lg w-100">
-                            <i class="fas fa-robot me-2"></i>
-                            Get AI Recommendations
-                            <i class="fas fa-arrow-right ms-2"></i>
-                        </button>
-                    </div>
-                </form>
-
-                <div class="alternative-actions mt-4">
-                    <div class="text-center">
-                        <p class="mb-3">Or explore other options:</p>
-                        <div class="d-flex gap-3 justify-content-center flex-wrap">
-                            <a href="{{ url_for('specialists') }}" class="btn btn-outline">
-                                <i class="fas fa-user-md me-2"></i>Browse All Doctors
-                            </a>
-                            <a href="{{ url_for('home') }}" class="btn btn-secondary">
-                                <i class="fas fa-home me-2"></i>Back to Home
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Info Cards -->
-            <div class="row mt-5">
-                <div class="col-md-6">
-                    <div class="card fade-in" style="animation-delay: 0.2s">
-                        <div class="text-center">
-                            <div class="info-icon">
-                                <i class="fas fa-brain"></i>
-                            </div>
-                            <h4>AI-Powered Analysis</h4>
-                            <p>Our advanced AI analyzes your symptoms and recommends the most suitable specialists for your condition.</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card fade-in" style="animation-delay: 0.4s">
-                        <div class="text-center">
-                            <div class="info-icon">
-                                <i class="fas fa-clock"></i>
-                            </div>
-                            <h4>Quick Results</h4>
-                            <p>Get instant recommendations and book your appointment in minutes, not hours.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Flash Messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="toast-container">
-                {% for category, message in messages %}
-                    <div class="toast {{ category }}">
-                        <div class="toast-header">
-                            <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' }} me-2"></i>
-                            <strong class="toast-title">{{ category.title() }}</strong>
-                        </div>
-                        <div class="toast-body">
-                            {{ message }}
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
-    {% endwith %}
-
-    <style>
-        .booking-form {
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        .form-actions {
-            margin-top: 30px;
-        }
-
-        .alternative-actions {
-            border-top: 1px solid var(--light-color);
-            padding-top: 20px;
-        }
-
-        .info-icon {
-            width: 60px;
-            height: 60px;
-            background: var(--gradient-secondary);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 20px;
-            color: white;
-            font-size: 1.5rem;
-        }
-
-        .form-text {
-            font-size: 0.875rem;
-            margin-top: 8px;
-            display: block;
-        }
-
-        .text-muted {
-            color: var(--info-color) !important;
-        }
-
-        textarea.form-control {
-            min-height: 140px;
-            resize: vertical;
-        }
-
-        textarea.form-control:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
-        }
-
-        @media (max-width: 768px) {
-            .alternative-actions .d-flex {
-                flex-direction: column;
-            }
-            
-            .alternative-actions .btn {
-                width: 100%;
-            }
-        }
-    </style>
-
-    <script>
-        // Auto-hide toasts after 5 seconds
-        setTimeout(function() {
-            const toasts = document.querySelectorAll('.toast');
-            toasts.forEach(toast => {
-                toast.style.display = 'none';
-            });
-        }, 5000);
-
-        // Character counter for textarea
-        const textarea = document.getElementById('symptoms');
-        const maxLength = 500;
+    <div class="form-container">
+        <h1>📋 Book an Appointment</h1>
+        <p class="subtitle">Get AI-powered doctor recommendations</p>
         
-        textarea.addEventListener('input', function() {
-            const currentLength = this.value.length;
-            if (currentLength > maxLength) {
-                this.value = this.value.substring(0, maxLength);
-            }
-        });
-    </script>
+        <form method="POST">
+            <div class="form-group">
+                <label for="symptoms">Describe your symptoms:</label>
+                <textarea id="symptoms" name="symptoms" rows="4" placeholder="e.g., chest pain, headache, fever..." required></textarea>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-robot me-2"></i>Get AI Recommendations
+            </button>
+        </form>
+        
+        <div class="navigation">
+            <a href="/specialists" class="btn">👨‍⚕️ Browse All Doctors</a>
+            <a href="/" class="btn">🏠 Home</a>
+        </div>
+    </div>
 </body>
 </html>
