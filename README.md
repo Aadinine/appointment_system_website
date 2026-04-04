@@ -6,89 +6,76 @@ A comprehensive web-based appointment booking system with AI-powered doctor reco
 
 ### 🤖 AI-Powered Doctor Recommendations
 - **Multi-AI Support**: Uses Groq, Gemini, and OpenAI for symptom analysis
-- **Smart Matching**: Matches patients with nearby doctors based on their condition and location
+- **Smart Matching**: Matches patients with nearby doctors based on condition and location
 - **Priority Assessment**: Categorizes appointments as URGENT, ROUTINE, or NORMAL
 - **Distance-Based Sorting**: Doctors displayed in ascending order of distance
 - **Fallback Analysis**: Keyword-based analysis if AI services fail
 - **Symptom Processing**: Natural language processing for medical conditions
 - **Recommendation Timeline**: AI provides suggested consultation timeline
-- **Medical Category Classification**: Automatic categorization of medical conditions
 
 ### 📅 Real-Time Appointment Booking
 - **Extended Hours**: 30-minute slots from 9:00 AM to 9:00 PM
 - **Lunch Break Management**: 12:00 PM available, 12:30-14:00 skipped
-- **Live Availability**: Real-time status updates showing available, booked, unavailable, and past time slots
+- **Live Availability**: Real-time status updates (available/booked/unavailable/past)
 - **Date-Based Scheduling**: Dynamic time slot updates when changing dates
 - **Double Booking Prevention**: Server-side validation with race condition protection
 - **Smart Time Validation**: Prevents booking past time slots on current date
-- **Time Slot Status**: Visual indicators for available/booked/unavailable/past slots
-- **Real-Time Updates**: Instant availability updates across all users
 - **Cancellation Integration**: Cancelled slots become immediately available
+- **Real-Time Updates**: Instant availability updates across all users
 
 ### 👥 User Management & Dashboard
 - **Session-Based Authentication**: Secure user login with session management
 - **Personal Dashboard**: View upcoming and past appointments
 - **Smart Appointment Classification**: Automatic past/upcoming based on date AND time
+- **Appointment Cancellation**: One-click cancellation with confirmation
+- **Status Management**: Clear visual indicators (Confirmed/Cancelled/Completed)
+- **Auto-Refresh**: Dashboard updates after actions
 - **Clickable Appointment Cards**: Direct access to appointment details
 - **Professional UI**: Clean, responsive dashboard with proper spacing
-- **Appointment Cancellation**: One-click cancellation with confirmation
-- **Status Management**: Clear visual indicators for appointment states
-- **Auto-Refresh**: Dashboard updates after actions
-- **Tab Navigation**: Organized upcoming/past appointment sections
-- **Empty States**: Helpful messages when no appointments exist
 
 ### 📋 Appointment Management
 - **Complete Booking Workflow**: From symptom input to confirmation
 - **Professional Receipts**: Detailed appointment information with unique IDs
 - **Calendar Integration**: Add appointments to Google Calendar
 - **Print Functionality**: Printable appointment receipts
-- **Appointment Bills**: Professional information pages without payment details
 - **Appointment IDs**: Unique 6-character IDs generated from ObjectId
 - **Specialty Display**: Doctor specialty shown on all appointment pages
 - **Symptom Recording**: Patient symptoms saved with appointments
 - **Hospital Information**: Complete hospital details displayed
-- **Contact Information**: Patient contact details stored securely
 
 ### 🗺️ Location-Based Services
-- **Distance Calculation**: Haversine formula for accurate distance measurements
+- **Distance Calculation**: Haversine formula for accurate measurements
 - **Nearby Doctors**: Shows doctors sorted by proximity to user's location
-- **Hospital Information**: Complete details including address, phone, and availability
-- **User Location**: Delhi-based coordinates for distance calculations
 - **Geographic Sorting**: Closest doctors displayed first
 - **Distance Badges**: Visual distance indicators on doctor cards
 - **Location-Based Recommendations**: AI considers proximity in recommendations
+- **User Location**: Delhi-based coordinates for distance calculations
 
 ### ☁️ Cloud Database Integration
 - **MongoDB Atlas**: Cloud-based data storage for scalability
 - **Real-Time Sync**: Instant updates across all users
 - **Data Fallback**: Local JSON backup for offline functionality
 - **Appointment Persistence**: All data stored in cloud database
-- **User Data Security**: Encrypted storage of personal information
 - **Scalable Architecture**: Handles multiple concurrent users
-- **Real-Time Availability**: Live slot availability across all users
 - **Data Consistency**: Atomic operations prevent data corruption
 
-### � Security & Authentication
+### 🔒 Security & Authentication
 - **Session Management**: Secure 24-hour session tokens
 - **User Validation**: Email-based authentication system
 - **Data Protection**: Secure storage of personal health information
 - **Input Validation**: Server-side validation for all user inputs
 - **XSS Protection**: HTML escaping for user-generated content
 - **Booking Protection**: Multiple layers prevent double booking
-- **Time Validation**: Prevents booking of past time slots
 - **Ownership Verification**: Users can only access their own appointments
 
-### �📱 Modern User Experience
+### 📱 Modern User Experience
 - **Responsive Design**: Works seamlessly on desktop, tablet, and mobile
 - **Interactive UI**: Smooth animations and transitions
 - **Error Handling**: User-friendly error messages and loading indicators
-- **Accessibility**: Semantic HTML and ARIA compliance
-- **Professional Styling**: Modern, clean interface design
-- **Loading Indicators**: Visual feedback during operations
 - **Toast Notifications**: Non-intrusive success/error messages
 - **Confirmation Dialogs**: User confirmations for critical actions
-- **Hover Effects**: Interactive button and card animations
-- **Color-Coded Status**: Visual appointment status indicators
+- **Professional Styling**: Modern, clean interface design
+- **Loading Indicators**: Visual feedback during operations
 
 ### 🏥 Medical Professional Features
 - **Doctor Profiles**: Complete doctor information and specialties
@@ -97,8 +84,6 @@ A comprehensive web-based appointment booking system with AI-powered doctor reco
 - **Professional Information**: Doctor qualifications and experience
 - **Specialty Categories**: Organized by medical specialties
 - **Availability Status**: Real-time doctor availability
-- **Contact Information**: Hospital phone and address details
-- **Professional Photos**: Visual representation of medical staff
 
 ### 🎯 Advanced Functionality
 - **Real-Time Cancellation**: Instant appointment cancellation with Atlas updates
@@ -106,38 +91,15 @@ A comprehensive web-based appointment booking system with AI-powered doctor reco
 - **Appointment History**: Complete record of all appointments
 - **Status Tracking**: Confirmed/Cancelled/Completed status management
 - **Timestamp Recording**: Creation and cancellation timestamps
-- **Data Integrity**: Consistent appointment categorization
 - **Multi-User Support**: Concurrent booking with conflict prevention
 - **Race Condition Handling**: Prevents simultaneous booking conflicts
-
-### 📊 Technical Features
-- **Flask Web Framework**: Python-based web application
-- **AJAX Integration**: Dynamic content updates without page reloads
-- **RESTful API**: Clean API endpoints for all operations
-- **JSON Responses**: Structured data exchange
-- **Error Logging**: Comprehensive error tracking
-- **Performance Optimization**: Efficient database queries
-- **Modular Architecture**: Clean code organization
-- **Environment Configuration**: Secure environment variable management
-
-### 🎨 Design & UI Elements
-- **Bootstrap Integration**: Professional CSS framework
-- **Custom Styling**: Tailored design system
-- **Icon Integration**: Font Awesome icons throughout
-- **Card-Based Layout**: Modern card design patterns
-- **Responsive Grid**: Flexible layout system
-- **Color Psychology**: Medical-appropriate color scheme
-- **Typography**: Clean, readable font hierarchy
-- **Interactive Elements**: Hover states and transitions
-- **Mobile Optimization**: Touch-friendly interface
-- **Professional Branding**: Consistent visual identity
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 - Python 3.9+
 - MongoDB Atlas account
-- Google Gemini API key
+- AI API keys (Groq, Gemini, OpenAI)
 
 ### Installation
 
@@ -158,106 +120,125 @@ A comprehensive web-based appointment booking system with AI-powered doctor reco
    # Edit .env with your API keys
    ```
 
-4. **Configure MongoDB Atlas**
-   ```bash
-   python atlas_setup.py
-   ```
-
-5. **Set up sample appointments**
-   ```bash
-   python setup_appointments.py
-   ```
-
-6. **Run the application**
+4. **Run the application**
    ```bash
    python app.py
    ```
 
-7. **Open your browser**
+5. **Open your browser**
    Navigate to `http://localhost:5000`
 
 ## 🔧 Configuration
 
 ### Environment Variables (.env)
 ```env
-GEMINI_API_KEY=your_google_gemini_api_key
+GROQ_API_KEY=your_groq_api_key
+GEMINI_API_KEY=your_gemini_api_key
+OPENAI_API_KEY=your_openai_api_key
 ATLAS_CONNECTION_STRING=your_mongodb_atlas_connection_string
 ```
 
 ### MongoDB Atlas Setup
 1. Create a free MongoDB Atlas account
 2. Create a cluster named "appointment_system"
-3. Create a collection named "doctor"
-4. Create a collection named "appointments"
-5. Add your connection string to `.env`
+3. Create collections: "doctor" and "appointments"
+4. Add your connection string to `.env`
 
 ## 📁 Project Structure
 
 ```
 appointment-system/
-├── app.py                 # Main Flask application with all features
-├── atlas_setup.py         # MongoDB Atlas initialization
-├── setup_appointments.py  # Sample appointment data
+├── app.py                 # Main Flask application
 ├── requirements.txt       # Python dependencies
-├── .env                   # Environment variables
+├── Procfile              # Railway deployment configuration
+├── .env                  # Environment variables
 ├── data/
-│   └── doctors.json       # Doctor data (fallback)
+│   └── doctors.json      # Doctor data (fallback)
 ├── static/
-│   └── style.css          # Complete application styles
+│   └── style.css         # Application styles
 ├── templates/
-│   ├── index.html         # Home page with AI analysis
-│   ├── book.html          # Symptom input form
-│   ├── result.html        # AI doctor recommendations
-│   ├── specialists.html   # All specialists (horizontal layout)
-│   ├── booking.html       # Appointment booking with time slots
-│   ├── confirmation.html  # Booking confirmation page
-│   ├── appointment_bill.html # Professional appointment receipts
-│   ├── dashboard.html     # User dashboard with appointments
-│   ├── login.html         # User authentication
-│   └── register.html      # User registration
-└── flask_session/         # Session storage (auto-generated)
+│   ├── index.html        # Home page with AI analysis
+│   ├── book.html         # Symptom input form
+│   ├── result.html       # AI doctor recommendations
+│   ├── specialists.html  # All specialists
+│   ├── booking.html      # Appointment booking
+│   ├── confirmation.html # Booking confirmation
+│   ├── appointment_bill.html # Appointment receipts
+│   ├── dashboard.html    # User dashboard
+│   ├── login.html        # User authentication
+│   └── register.html     # User registration
+└── flask_session/        # Session storage (auto-generated)
 ```
 
 ## 🎯 Usage Guide
 
 ### For Patients
-1. **Enter Symptoms**: Describe your medical condition
-2. **Get Recommendations**: AI suggests appropriate specialists
-3. **Choose Doctor**: Select from nearby available doctors
-4. **Book Appointment**: Select date and time slot
-5. **Receive Confirmation**: Get appointment details with unique ID
+1. **Register/Login**: Create account or login with email
+2. **Enter Symptoms**: Describe your medical condition
+3. **Get Recommendations**: AI suggests appropriate specialists
+4. **Choose Doctor**: Select from nearby available doctors
+5. **Book Appointment**: Select date and time slot
+6. **Manage Appointments**: View, cancel, or get appointment details
 
-### For Administrators
-1. **Manage Doctors**: Update doctor information in MongoDB Atlas
-2. **Monitor Appointments**: View booking statistics and availability
-3. **System Maintenance**: Use setup scripts for data management
-
-## 🔒 Security Features
-
-- **Input Validation**: Server-side validation for all user inputs
-- **SQL Injection Prevention**: Parameterized database queries
-- **XSS Protection**: HTML escaping for user-generated content
-- **Booking Protection**: Multiple layers prevent double booking
-- **Time Validation**: Prevents booking of past time slots
+### Key Features
+- **AI Analysis**: Multi-AI symptom analysis with priority assessment
+- **Real-Time Booking**: Live availability with instant updates
+- **Smart Dashboard**: Organized appointment management
+- **Location-Based**: Find nearest doctors with distance calculations
+- **Professional Receipts**: Detailed appointment information
+- **Cancellation**: One-click cancellation with immediate updates
 
 ## 🛠️ Technologies Used
 
 ### Backend
 - **Flask**: Python web framework
-- **Google Gemini AI**: Symptom analysis and recommendations
 - **MongoDB Atlas**: Cloud database
-- **PyMongo**: MongoDB Python driver
-- **Python-Dotenv**: Environment variable management
+- **Multi-AI Integration**: Groq, Gemini, OpenAI
+- **Session Management**: Flask-Session
 
 ### Frontend
-- **HTML5**: Semantic markup
-- **CSS3**: Modern styling with animations
+- **HTML5/CSS3**: Modern styling with animations
 - **JavaScript**: Dynamic interactions and AJAX calls
-- **Responsive Design**: Mobile-first approach
+- **Bootstrap**: Professional UI framework
+- **Font Awesome**: Icon integration
 
 ### API Integrations
-- **Google Gemini AI**: Natural language processing
+- **Groq AI**: Llama model for symptom analysis
+- **Google Gemini AI**: Medical recommendations
+- **OpenAI**: GPT model for analysis
 - **MongoDB Atlas**: Real-time database operations
+
+## 🔄 API Endpoints
+
+### Main Routes
+- `GET /` - Home page with AI symptom analysis
+- `GET/POST /book` - Symptom analysis and AI recommendations
+- `GET /booking/<doctor_id>` - Booking page with time slots
+- `POST /confirm_booking` - Process booking
+- `GET /get_time_slots/<doctor_id>/<date>` - Time slots API
+- `GET /dashboard` - User dashboard
+- `POST /cancel_appointment/<id>` - Cancel appointment
+- `GET /appointment_bill/<id>` - Appointment receipt
+- `GET /health` - Health check for deployment
+
+### User Management
+- `GET/POST /login` - User authentication
+- `GET/POST /register` - User registration
+- `GET /logout` - User logout
+
+## 🚀 Deployment
+
+### Railway Deployment
+1. Connect your GitHub repository to Railway
+2. Set environment variables in Railway dashboard
+3. Deploy - Railway will automatically detect the Flask app
+4. Health check endpoint: `/health`
+
+### Environment Variables Required
+- `GROQ_API_KEY`
+- `GEMINI_API_KEY` 
+- `OPENAI_API_KEY`
+- `ATLAS_CONNECTION_STRING`
 
 ## 📊 Database Schema
 
@@ -274,7 +255,6 @@ appointment-system/
     "lng": longitude,
     "phone": "Phone Number"
   },
-  "description": "Doctor description",
   "conditions": ["condition1", "condition2"],
   "available": true
 }
@@ -291,152 +271,34 @@ appointment-system/
   "specialty": "Medical Specialty",
   "patient_name": "Patient Name",
   "patient_email": "email@example.com",
-  "patient_phone": "Phone Number",
   "appointment_date": "YYYY-MM-DD",
   "time_slot": "HH:MM",
   "symptoms": "Patient symptoms",
-  "status": "confirmed",
-  "created_at": "ISO_TIMESTAMP"
+  "status": "confirmed/cancelled",
+  "created_at": "ISO_TIMESTAMP",
+  "cancelled_at": "ISO_TIMESTAMP"
 }
 ```
-
-## 🔄 API Endpoints
-
-### Web Routes
-- `GET /` - Home page with AI symptom analysis
-- `GET /specialists` - All specialists with distance (horizontal layout)
-- `GET/POST /book` - Symptom analysis and AI recommendations
-- `GET /booking/<doctor_id>` - Booking page with time slots
-- `POST /confirm_booking` - Process booking and save to database
-- `GET /get_time_slots/<doctor_id>/<date>` - Time slots API with real-time status
-- `GET /dashboard` - User dashboard with appointments
-- `GET/POST /login` - User authentication
-- `GET /logout` - User logout
-- `GET /register` - User registration
-- `GET /appointment_bill/<appointment_id>` - Professional appointment receipt
-
-### User Management Routes
-- `POST /register` - Create new user account
-- `POST /login` - Authenticate user and create session
-- Session management with 24-hour expiry
-
-### API Responses
-```json
-{
-  "time_slots": [
-    {
-      "time": "09:00",
-      "available": false,
-      "status": "booked"
-    },
-    {
-      "time": "09:30",
-      "available": true,
-      "status": "available"
-    },
-    {
-      "time": "11:30",
-      "available": false,
-      "status": "past"
-    }
-  ]
-}
-```
-
-## 🧪 Testing
-
-### Manual Testing
-1. **Booking Flow**: Test complete appointment booking process
-2. **Date Changes**: Verify dynamic time slot updates
-3. **Double Booking**: Attempt to book same slot twice
-4. **Past Times**: Try booking past time slots
-5. **Mobile View**: Test responsive design
-
-### Sample Data
-Use `setup_appointments.py` to create sample appointments for testing:
-```bash
-python setup_appointments.py
-```
-
-## 🚀 Deployment
-
-### Production Setup
-1. **Environment Variables**: Set production values in `.env`
-2. **Database**: Use MongoDB Atlas production cluster
-3. **Web Server**: Use Gunicorn or similar WSGI server
-4. **HTTPS**: Configure SSL certificate
-5. **Domain**: Point custom domain to application
-
-### Docker Deployment
-```dockerfile
-FROM python:3.9-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-COPY . .
-EXPOSE 5000
-CMD ["python", "app.py"]
-```
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## 📝 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🆘 Support
-
-For issues and questions:
-1. Check the troubleshooting section
-2. Review the API documentation
-3. Create an issue on GitHub
-4. Contact the development team
 
 ## 🔄 Version History
 
-- **v2.0.0** - Complete production-ready system with user authentication
-  - Added user login/registration system with session management
-  - Professional dashboard with appointment management
+- **v2.0.0** - Complete production-ready system
+  - User authentication and dashboard
   - Multi-AI support (Groq, Gemini, OpenAI)
-  - Extended hours (9 AM - 9 PM) with 12:00 PM slot
-  - Distance-based doctor sorting
-  - Appointment receipts and calendar integration
-  - Double booking prevention with race condition protection
-  - Smart time validation (date + time)
-  - Professional UI/UX improvements
+  - Real-time appointment booking and cancellation
+  - Location-based doctor recommendations
+  - Professional UI/UX with responsive design
+  - Railway deployment ready
 
-- **v1.0.0** - Initial release with basic booking system
-  - AI-powered symptom analysis
+- **v1.0.0** - Initial release
   - Basic appointment booking
+  - AI-powered symptom analysis
   - MongoDB Atlas integration
-  - Distance calculations
 
-- **Future versions** may include:
-  - Email notifications
-  - Payment processing
-  - Telemedicine features
-  - Mobile app development
+## 📝 License
 
-## 📈 Performance
+This project is licensed under the MIT License.
 
-- **Response Time**: < 500ms for most operations
-- **Database Queries**: Optimized indexes for fast lookups
-- **Caching**: Browser caching for static assets
-- **CDN Ready**: Static assets can be served via CDN
+## 🔗 Repository
 
-## 🔮 Future Enhancements
-
-- **User Authentication**: Patient and doctor login system
-- **Email Notifications**: Automated appointment reminders
-- **Video Consultation**: Telemedicine integration
-- **Payment Processing**: Online payment integration
-- **Analytics**: Dashboard for appointment statistics
-- **Mobile App**: Native iOS and Android applications
-- **Multi-Language**: Support for multiple languages
-- **API Versioning**: RESTful API for third-party integration
+https://github.com/Aadinine/appointment_system_website
