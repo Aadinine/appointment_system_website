@@ -271,6 +271,11 @@ def analyze_symptoms(symptoms):
     # Try to use actual AI services first
     ai_service_used = "Keyword Analysis"
     
+    # Debug environment variables
+    print(f"🔍 Environment Check - Groq: {'✅' if os.getenv('GROQ_API_KEY') else '❌'}")
+    print(f"🔍 Environment Check - Gemini: {'✅' if os.getenv('GEMINI_API_KEY') else '❌'}")
+    print(f"🔍 Environment Check - OpenAI: {'✅' if os.getenv('OPENAI_API_KEY') else '❌'}")
+    
     # Check Groq first
     if os.getenv("GROQ_API_KEY"):
         try:
@@ -310,9 +315,11 @@ Available specialties: Cardiologist, Dermatologist, Neurologist, Orthopedic, Pul
 Return JSON format: {{"specialty": "specialty_name", "category": "URGENT/ROUTINE/NORMAL", "reason": "detailed explanation", "timeline": "specific timeframe"}}""")
             result = response.text.strip()
             print(f"🤖 [Gemini responded]: {result}")
+            ai_service_used = "Google Gemini"
             return result
         except Exception as e:
             print(f"❌ Gemini failed: {e}")
+            print(f"🔍 Gemini API Key: {os.getenv('GEMINI_API_KEY')[:10] if os.getenv('GEMINI_API_KEY') else 'None'}")
     
     # Check OpenAI
     if os.getenv("OPENAI_API_KEY"):
@@ -333,9 +340,30 @@ Return JSON format: {{"specialty": "specialty_name", "category": "URGENT/ROUTINE
             )
             result = response.choices[0].message.content.strip()
             print(f"🤖 [OpenAI responded]: {result}")
+            ai_service_used = "OpenAI"
             return result
         except Exception as e:
             print(f"❌ OpenAI failed: {e}")
+            print(f"🔍 OpenAI API Key: {os.getenv('OPENAI_API_KEY')[:10] if os.getenv('OPENAI_API_KEY') else 'None'}")
+    
+    print(f"🔍 All AI services failed, using keyword analysis. Service used: {ai_service_used}")
+    print(f"🔍 Environment variables loaded: Groq={bool(os.getenv('GROQ_API_KEY'))}, Gemini={bool(os.getenv('GEMINI_API_KEY'))}, OpenAI={bool(os.getenv('OPENAI_API_KEY'))}")
+    
+    # Fallback to keyword analysis
+    specialties = [
+        {"name": "Cardiologist", "keywords": ["heart", "chest pain", "palpitations", "shortness of breath", "blood pressure"]},
+        {"name": "Dermatologist", "keywords": ["skin", "rash", "acne", "eczema", "moles", "sunburn"]},
+        {"name": "Neurologist", "keywords": ["headache", "migraine", "seizure", "dizziness", "memory loss", "stroke"]},
+        {"name": "Orthopedic", "keywords": ["bone", "joint", "fracture", "arthritis", "sprain", "back pain"]},
+        {"name": "Pulmonologist", "keywords": ["lungs", "breathing", "cough", "asthma", "pneumonia", "bronchitis"]},
+        {"name": "General Physician", "keywords": ["fever", "cold", "flu", "general checkup", "routine", "health"]},
+        {"name": "Gastroenterologist", "keywords": ["stomach", "digestion", "acid reflux", "ulcer", "liver", "gallbladder"]},
+        {"name": "Ophthalmologist", "keywords": ["eye", "vision", "cataract", "glaucoma", "retina", "blindness"]},
+        {"name": "ENT Specialist", "keywords": ["ear", "nose", "throat", "sinus", "tonsils", "hearing loss"]},
+        {"name": "Gynecologist", "keywords": ["women", "pregnancy", "menstrual", "uterus", "ovarian", "breast"]},
+        {"name": "Pediatrician", "keywords": ["child", "baby", "infant", "pediatric", "kids", "children"]},
+        {"name": "Psychiatrist", "keywords": ["mental", "depression", "anxiety", "stress", "bipolar", "schizophrenia"]}
+    ]
     
     # Keyword fallback with better explanations
     if any(word in symptoms_lower for word in ['chest', 'heart', 'breathing']):
