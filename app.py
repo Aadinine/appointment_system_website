@@ -288,6 +288,14 @@ def analyze_symptoms(symptoms):
         # Check Groq first
         if os.getenv("GROQ_API_KEY"):
             try:
+                # Force clean environment for Groq
+                import os
+                old_env = os.environ.copy()
+                # Remove any proxy-related variables
+                for key in list(os.environ.keys()):
+                    if 'proxy' in key.lower():
+                        del os.environ[key]
+                
                 from groq import Groq
                 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
                 response = client.chat.completions.create(
@@ -311,12 +319,13 @@ Return JSON format: {{"specialty": "specialty_name", "category": "URGENT/ROUTINE
                 print(f"❌ Groq failed: {e}")
                 print(f"🔍 Groq API Key: {os.getenv('GROQ_API_KEY')[:10] if os.getenv('GROQ_API_KEY') else 'None'}")
         
-        # Check Gemini
+        # Check Gemini with updated model
         if os.getenv("GEMINI_API_KEY"):
             try:
                 import google.generativeai as genai
                 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-                model = genai.GenerativeModel('gemini-pro')
+                # Use gemini-1.5-flash instead of gemini-pro
+                model = genai.GenerativeModel('gemini-1.5-flash')
                 response = model.generate_content(f"""You are a medical AI assistant. Provide helpful, natural responses in JSON format only. Focus on the most likely specialty based on symptoms.
 
 Analyze these symptoms: "{symptoms}"
@@ -335,6 +344,14 @@ Return JSON format: {{"specialty": "specialty_name", "category": "URGENT/ROUTINE
         # Check OpenAI
         if os.getenv("OPENAI_API_KEY"):
             try:
+                # Force clean environment for OpenAI
+                import os
+                old_env = os.environ.copy()
+                # Remove any proxy-related variables
+                for key in list(os.environ.keys()):
+                    if 'proxy' in key.lower():
+                        del os.environ[key]
+                
                 import openai
                 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
                 response = client.chat.completions.create(
