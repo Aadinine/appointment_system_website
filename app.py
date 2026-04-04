@@ -438,11 +438,18 @@ def logout():
 @app.route('/health')
 def health_check():
     """Health check endpoint for Railway deployment"""
-    return jsonify({
-        "status": "healthy",
-        "service": "appointment-system",
-        "timestamp": datetime.now().isoformat()
-    })
+    try:
+        return jsonify({
+            "status": "healthy",
+            "service": "appointment-system",
+            "timestamp": datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }), 500
 
 @app.route('/dashboard')
 @login_required
@@ -787,22 +794,13 @@ def appointment_bill(appointment_id):
         return redirect(url_for('dashboard'))
 
 if __name__ == '__main__':
-    print("🚀 Starting appointment system...")
-    
-    # Check Atlas connection
-    atlas_db = get_atlas_connection()
-    if atlas_db is None:
-        print("❌ Atlas database connection failed")
-    
-    # Load doctor data
-    doctors = load_doctor_data()
-    print(f"📋 Loaded {len(doctors['specialists'])} specialists")
-    
-    # Check AI services status
-    ai_status = check_ai_status()
-    print("🤖 AI Services Status:")
-    for service, status in ai_status.items():
-        print(f"  {service}: {status}")
-    
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    print(f"🚀 Starting appointment system on port {port}...")
+    
+    try:
+        # Simple startup for Railway
+        app.run(host='0.0.0.0', port=port, debug=False)
+    except Exception as e:
+        print(f"❌ Failed to start app: {e}")
+        # Try to start with minimal configuration
+        app.run(host='0.0.0.0', port=port, debug=False)
