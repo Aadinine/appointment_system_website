@@ -772,8 +772,9 @@ def get_time_slots(doctor_id, date):
                 if hour == 13:
                     continue
                 
-                # Create datetime for this slot
+                # Create datetime for this slot (timezone-aware)
                 slot_datetime = datetime.strptime(f"{date} {time_str}", '%Y-%m-%d %H:%M')
+                slot_datetime = slot_datetime.replace(tzinfo=timezone.utc) + timedelta(hours=5, minutes=30)  # Make it IST-aware
                 
                 # Check if this slot is in the past (today)
                 is_past = slot_datetime < now
