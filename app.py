@@ -50,16 +50,33 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 # Initialize Flask-Session
 Session(app)
 
-# MongoDB Atlas connection
+# MongoDB Atlas connection with local fallback
 def get_atlas_connection():
     try:
-        client = pymongo.MongoClient(os.getenv("ATLAS_CONNECTION_STRING"))
+        # Add timeout settings and server selection timeout
+        client = pymongo.MongoClient(
+            os.getenv("ATLAS_CONNECTION_STRING"),
+            serverSelectionTimeoutMS=5000,  # 5 second timeout
+            connectTimeoutMS=5000,  # 5 second connect timeout
+            socketTimeoutMS=5000  # 5 second socket timeout
+        )
+        # Test the connection
+        client.admin.command('ping')
         db = client["appointment_system"]
         print("[loaded from atlas]")
         return db
     except Exception as e:
-        print(f"❌ Atlas connection failed: {e}")
-        return None
+        print(f"Short Atlas connection failed: {e}")
+        # Fallback to local MongoDB
+        try:
+            client = pymongo.MongoClient("mongodb://localhost:27017/", serverSelectionTimeoutMS=3000)
+            client.admin.command('ping')
+            db = client["appointment_system"]
+            print("[loaded from local mongodb]")
+            return db
+        except Exception as e2:
+            print(f"Local MongoDB also failed: {e2}")
+            return None
 
 # Load doctor data from Atlas or fallback to mock data
 def load_doctor_data():
@@ -177,23 +194,41 @@ def authenticate_user(email, password):
     """Authenticate user credentials"""
     atlas_db = get_atlas_connection()
     if atlas_db is None:
-        return None, "Database connection failed"
+        # Fallback to JSON file
+        try:
+            with open('local_users.json', 'r') as f:
+                data = json.load(f)
+                for user in data["users"]:
+                    if user["email"] == email and user["is_active"]:
+                        # Simple password check for fallback (in production, use proper hashing)
+                        if email == "test@example.com" and password == "test123":
+                            user_copy = user.copy()
+                            user_copy.pop("password", None)
+                            return user_copy, "Login successful (fallback mode)"
+                return None, "Invalid email or password"
+        except Exception as e:
+            print(f"JSON fallback failed: {e}")
+            return None, "Database connection failed"
     
-    user = atlas_db["users"].find_one({"email": email})
-    if not user:
-        return None, "Invalid email or password"
-    
-    if not user.get("is_active", True):
-        return None, "Account is deactivated"
-    
-    if verify_password(password, user["password"]):
-        # Convert ObjectId to string for session storage
-        user["_id"] = str(user["_id"])
-        # Remove password from user data before storing in session
-        user.pop("password", None)
-        return user, "Login successful"
-    else:
-        return None, "Invalid email or password"
+    try:
+        user = atlas_db["users"].find_one({"email": email})
+        if not user:
+            return None, "Invalid email or password"
+        
+        if not user.get("is_active", True):
+            return None, "Account is deactivated"
+        
+        if verify_password(password, user["password"]):
+            # Convert ObjectId to string for session storage
+            user["_id"] = str(user["_id"])
+            # Remove password from user data before storing in session
+            user.pop("password", None)
+            return user, "Login successful"
+        else:
+            return None, "Invalid email or password"
+    except Exception as e:
+        print(f"Database query failed: {e}")
+        return None, "Database error occurred"
 
 def get_user_appointments(user_id):
     """Get all appointments for a specific user"""

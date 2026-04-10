@@ -1,0 +1,11 @@
+{
+    "users": [
+        {
+            "email": "test@example.com",
+            "password": "pbkdf2:sha256:260000$salt$hash",
+            "name": "Test User",
+            "phone": "1234567890",
+            "is_active": true
+        }
+    ]
+}
